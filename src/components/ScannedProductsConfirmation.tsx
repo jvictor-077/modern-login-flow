@@ -42,7 +42,7 @@ export function ScannedProductsConfirmation({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="w-[95vw] max-w-lg mx-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5 text-primary" />
@@ -53,22 +53,19 @@ export function ScannedProductsConfirmation({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[300px] pr-4">
+        <ScrollArea className="max-h-[50vh] pr-2">
           <div className="space-y-2">
             {products.map((product, index) => (
               <div
                 key={index}
-                className="flex items-start justify-between p-3 rounded-lg bg-muted/50 border border-border"
+                className="p-3 rounded-lg bg-muted/50 border border-border"
               >
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">{product.nome}</p>
+                <p className="font-medium text-sm leading-tight mb-1">{product.nome}</p>
+                <div className="flex items-center justify-between">
                   <p className="text-xs text-muted-foreground">
-                    {product.quantidade} {product.unidade || "UN"} × R${" "}
-                    {product.preco.toFixed(2).replace(".", ",")}
+                    {product.quantidade} {product.unidade || "UN"} × R$ {product.preco.toFixed(2).replace(".", ",")}
                   </p>
-                </div>
-                <div className="text-right ml-2">
-                  <p className="font-semibold text-sm text-primary">
+                  <p className="font-semibold text-sm text-primary whitespace-nowrap">
                     R$ {(product.quantidade * product.preco).toFixed(2).replace(".", ",")}
                   </p>
                 </div>
@@ -77,19 +74,19 @@ export function ScannedProductsConfirmation({
           </div>
         </ScrollArea>
 
-        <div className="flex items-center justify-between pt-2 border-t border-border">
-          <span className="text-sm text-muted-foreground">Total da nota:</span>
+        <div className="flex items-center justify-between pt-3 border-t border-border">
+          <span className="text-sm text-muted-foreground">Total:</span>
           <span className="font-bold text-lg">
             R$ {totalValue.toFixed(2).replace(".", ",")}
           </span>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={onClose} className="gap-2">
+        <DialogFooter className="flex-col gap-2 sm:flex-row">
+          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto gap-2">
             <X className="h-4 w-4" />
             Cancelar
           </Button>
-          <Button onClick={handleConfirm} className="gap-2">
+          <Button onClick={handleConfirm} className="w-full sm:w-auto gap-2">
             <Check className="h-4 w-4" />
             Adicionar {products.length} itens
           </Button>
