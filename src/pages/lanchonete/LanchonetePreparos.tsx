@@ -14,31 +14,11 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, Minus, Package, PlusCircle, ScanLine } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  unit: string;
-}
-
-const initialProducts: Product[] = [
-  { id: "1", name: "Açaí Polpa 10kg", price: 120.00, quantity: 5, unit: "balde" },
-  { id: "2", name: "Banana", price: 8.00, quantity: 30, unit: "kg" },
-  { id: "3", name: "Morango", price: 25.00, quantity: 10, unit: "kg" },
-  { id: "4", name: "Leite Condensado", price: 7.50, quantity: 24, unit: "lata" },
-  { id: "5", name: "Leite em Pó", price: 18.00, quantity: 12, unit: "pacote" },
-  { id: "6", name: "Granola", price: 15.00, quantity: 8, unit: "kg" },
-  { id: "7", name: "Aveia", price: 12.00, quantity: 6, unit: "kg" },
-  { id: "8", name: "Calda de Chocolate", price: 22.00, quantity: 10, unit: "litro" },
-  { id: "9", name: "Calda de Morango", price: 20.00, quantity: 8, unit: "litro" },
-  { id: "10", name: "Copo Descartável 300ml", price: 35.00, quantity: 20, unit: "pacote" },
-  { id: "11", name: "Colher Descartável", price: 18.00, quantity: 15, unit: "pacote" },
-];
+import { ItemPreparo } from "@/types/lanchonete";
+import { itensPreparo } from "@/data/lanchoneteData";
 
 export default function LanchonetePreparos() {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [products, setProducts] = useState<ItemPreparo[]>(itensPreparo);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newProduct, setNewProduct] = useState({ name: "", price: "", quantity: "", unit: "" });
 
@@ -46,8 +26,8 @@ export default function LanchonetePreparos() {
     setProducts((prev) =>
       prev.map((product) => {
         if (product.id === id) {
-          const newQuantity = Math.max(0, product.quantity + delta);
-          return { ...product, quantity: newQuantity };
+          const newQuantity = Math.max(0, product.quantidade + delta);
+          return { ...product, quantidade: newQuantity, updated_at: new Date() };
         }
         return product;
       })
@@ -71,12 +51,15 @@ export default function LanchonetePreparos() {
       return;
     }
 
-    const product: Product = {
-      id: Date.now().toString(),
-      name: newProduct.name.trim(),
-      price: parseFloat(newProduct.price.replace(",", ".")),
-      quantity: parseInt(newProduct.quantity),
-      unit: newProduct.unit || "unidade",
+    const product: ItemPreparo = {
+      id: `prep-${Date.now()}`,
+      nome: newProduct.name.trim(),
+      preco: parseFloat(newProduct.price.replace(",", ".")),
+      quantidade: parseInt(newProduct.quantity),
+      unidade: newProduct.unit || "unidade",
+      is_active: true,
+      created_at: new Date(),
+      updated_at: new Date(),
     };
 
     setProducts((prev) => [...prev, product]);
@@ -84,12 +67,12 @@ export default function LanchonetePreparos() {
     setIsAddDialogOpen(false);
     toast({
       title: "Item adicionado",
-      description: `${product.name} foi adicionado ao estoque.`,
+      description: `${product.nome} foi adicionado ao estoque.`,
     });
   };
 
   const totalValue = products.reduce(
-    (acc, product) => acc + product.price * product.quantity,
+    (acc, product) => acc + product.preco * product.quantidade,
     0
   );
 
@@ -189,10 +172,10 @@ export default function LanchonetePreparos() {
               >
                 <div className="flex-1 min-w-0 mr-2">
                   <h3 className="font-medium text-foreground truncate text-sm sm:text-base">
-                    {product.name}
+                    {product.nome}
                   </h3>
                   <p className="text-xs sm:text-sm text-muted-foreground">
-                    R$ {product.price.toFixed(2).replace(".", ",")} / {product.unit}
+                    R$ {product.preco.toFixed(2).replace(".", ",")} / {product.unidade}
                   </p>
                 </div>
 
@@ -207,9 +190,9 @@ export default function LanchonetePreparos() {
                   </Button>
 
                   <span className={`w-8 sm:w-12 text-center font-semibold tabular-nums text-sm sm:text-base ${
-                    product.quantity <= 5 ? "text-destructive" : "text-foreground"
+                    product.quantidade <= 5 ? "text-destructive" : "text-foreground"
                   }`}>
-                    {product.quantity}
+                    {product.quantidade}
                   </span>
 
                   <Button
@@ -223,7 +206,7 @@ export default function LanchonetePreparos() {
 
                   <div className="w-16 sm:w-24 text-right">
                     <span className="font-medium text-foreground text-sm sm:text-base">
-                      R$ {(product.price * product.quantity).toFixed(2).replace(".", ",")}
+                      R$ {(product.preco * product.quantidade).toFixed(2).replace(".", ",")}
                     </span>
                   </div>
                 </div>

@@ -21,32 +21,11 @@ import {
 } from "@/components/ui/select";
 import { Plus, Minus, Package, PlusCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-
-const categories = ["Bebidas", "Salgados", "Açaí", "Lanches", "Doces", "Outros"];
-
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  category: string;
-}
-
-const initialProducts: Product[] = [
-  { id: "1", name: "Água Mineral 500ml", price: 4.00, quantity: 48, category: "Bebidas" },
-  { id: "2", name: "Refrigerante Lata", price: 6.00, quantity: 36, category: "Bebidas" },
-  { id: "3", name: "Energético 250ml", price: 15.00, quantity: 24, category: "Bebidas" },
-  { id: "4", name: "Suco Natural 300ml", price: 10.00, quantity: 20, category: "Bebidas" },
-  { id: "5", name: "Coxinha", price: 8.00, quantity: 15, category: "Salgados" },
-  { id: "6", name: "Empada", price: 7.00, quantity: 12, category: "Salgados" },
-  { id: "7", name: "Pão de Queijo", price: 5.00, quantity: 30, category: "Salgados" },
-  { id: "8", name: "Açaí 500ml", price: 18.00, quantity: 10, category: "Açaí" },
-  { id: "9", name: "Açaí 300ml", price: 12.00, quantity: 15, category: "Açaí" },
-  { id: "10", name: "Sanduíche Natural", price: 15.00, quantity: 8, category: "Lanches" },
-];
+import { ProdutoLanchonete, CATEGORIAS_LANCHONETE, CategoriaLanchonete } from "@/types/lanchonete";
+import { produtosLanchonete } from "@/data/lanchoneteData";
 
 export default function LanchoneteEstoque() {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [products, setProducts] = useState<ProdutoLanchonete[]>(produtosLanchonete);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newProduct, setNewProduct] = useState({ name: "", price: "", quantity: "", category: "" });
 
@@ -54,8 +33,8 @@ export default function LanchoneteEstoque() {
     setProducts((prev) =>
       prev.map((product) => {
         if (product.id === id) {
-          const newQuantity = Math.max(0, product.quantity + delta);
-          return { ...product, quantity: newQuantity };
+          const newQuantity = Math.max(0, product.quantidade + delta);
+          return { ...product, quantidade: newQuantity, updated_at: new Date() };
         }
         return product;
       })
@@ -72,12 +51,15 @@ export default function LanchoneteEstoque() {
       return;
     }
 
-    const product: Product = {
-      id: Date.now().toString(),
-      name: newProduct.name.trim(),
-      price: parseFloat(newProduct.price.replace(",", ".")),
-      quantity: parseInt(newProduct.quantity),
-      category: newProduct.category,
+    const product: ProdutoLanchonete = {
+      id: `lanch-${Date.now()}`,
+      nome: newProduct.name.trim(),
+      preco: parseFloat(newProduct.price.replace(",", ".")),
+      quantidade: parseInt(newProduct.quantity),
+      categoria: newProduct.category as CategoriaLanchonete,
+      is_active: true,
+      created_at: new Date(),
+      updated_at: new Date(),
     };
 
     setProducts((prev) => [...prev, product]);
@@ -85,22 +67,22 @@ export default function LanchoneteEstoque() {
     setIsAddDialogOpen(false);
     toast({
       title: "Produto adicionado",
-      description: `${product.name} foi adicionado ao estoque.`,
+      description: `${product.nome} foi adicionado ao estoque.`,
     });
   };
 
   const totalValue = products.reduce(
-    (acc, product) => acc + product.price * product.quantity,
+    (acc, product) => acc + product.preco * product.quantidade,
     0
   );
 
   const groupedProducts = products.reduce((acc, product) => {
-    if (!acc[product.category]) {
-      acc[product.category] = [];
+    if (!acc[product.categoria]) {
+      acc[product.categoria] = [];
     }
-    acc[product.category].push(product);
+    acc[product.categoria].push(product);
     return acc;
-  }, {} as Record<string, Product[]>);
+  }, {} as Record<string, ProdutoLanchonete[]>);
 
   const actions = (
     <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -136,7 +118,7 @@ export default function LanchoneteEstoque() {
                 <SelectValue placeholder="Selecione uma categoria" />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((cat) => (
+                {CATEGORIAS_LANCHONETE.map((cat) => (
                   <SelectItem key={cat} value={cat}>
                     {cat}
                   </SelectItem>
@@ -196,10 +178,10 @@ export default function LanchoneteEstoque() {
                   >
                     <div className="flex-1 min-w-0 mr-2">
                       <h3 className="font-medium text-foreground truncate text-sm sm:text-base">
-                        {product.name}
+                        {product.nome}
                       </h3>
                       <p className="text-xs sm:text-sm text-muted-foreground">
-                        R$ {product.price.toFixed(2).replace(".", ",")} / unidade
+                        R$ {product.preco.toFixed(2).replace(".", ",")} / unidade
                       </p>
                     </div>
 
@@ -214,9 +196,9 @@ export default function LanchoneteEstoque() {
                       </Button>
 
                       <span className={`w-8 sm:w-12 text-center font-semibold tabular-nums text-sm sm:text-base ${
-                        product.quantity <= 5 ? "text-destructive" : "text-foreground"
+                        product.quantidade <= 5 ? "text-destructive" : "text-foreground"
                       }`}>
-                        {product.quantity}
+                        {product.quantidade}
                       </span>
 
                       <Button
@@ -230,7 +212,7 @@ export default function LanchoneteEstoque() {
 
                       <div className="w-16 sm:w-24 text-right">
                         <span className="font-medium text-foreground text-sm sm:text-base">
-                          R$ {(product.price * product.quantity).toFixed(2).replace(".", ",")}
+                          R$ {(product.preco * product.quantidade).toFixed(2).replace(".", ",")}
                         </span>
                       </div>
                     </div>
