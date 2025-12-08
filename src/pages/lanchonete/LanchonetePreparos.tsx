@@ -16,11 +16,15 @@ import { Plus, Minus, Package, PlusCircle, ScanLine } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ItemPreparo } from "@/types/lanchonete";
 import { itensPreparo } from "@/data/lanchoneteData";
+import { QRCodeScanner } from "@/components/QRCodeScanner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function LanchonetePreparos() {
   const [products, setProducts] = useState<ItemPreparo[]>(itensPreparo);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [newProduct, setNewProduct] = useState({ name: "", price: "", quantity: "", unit: "" });
+  const isMobile = useIsMobile();
 
   const handleQuantityChange = (id: string, delta: number) => {
     setProducts((prev) =>
@@ -35,9 +39,32 @@ export default function LanchonetePreparos() {
   };
 
   const handleScanInvoice = () => {
+    if (isMobile) {
+      setIsScannerOpen(true);
+    } else {
+      toast({
+        title: "Escanear Nota Fiscal",
+        description: "Use um dispositivo móvel para escanear o QR Code da nota fiscal.",
+      });
+    }
+  };
+
+  const handleProductsScanned = (scannedProducts: { nome: string; quantidade: number; preco: number; unidade?: string }[]) => {
+    const newProducts: ItemPreparo[] = scannedProducts.map((p, index) => ({
+      id: `scanned-${Date.now()}-${index}`,
+      nome: p.nome,
+      preco: p.preco,
+      quantidade: p.quantidade,
+      unidade: p.unidade || "unidade",
+      is_active: true,
+      created_at: new Date(),
+      updated_at: new Date(),
+    }));
+
+    setProducts((prev) => [...prev, ...newProducts]);
     toast({
-      title: "Escanear Nota Fiscal",
-      description: "Funcionalidade de escaneamento será implementada em breve.",
+      title: "Itens adicionados!",
+      description: `${newProducts.length} itens foram adicionados ao estoque.`,
     });
   };
 
@@ -229,6 +256,13 @@ export default function LanchonetePreparos() {
           </div>
         </CardContent>
       </Card>
+
+      {/* QR Code Scanner - Mobile only */}
+      <QRCodeScanner
+        open={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onProductsScanned={handleProductsScanned}
+      />
     </AdminLayout>
   );
 }
