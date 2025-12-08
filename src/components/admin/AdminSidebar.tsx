@@ -1,4 +1,4 @@
-import { LayoutDashboard, Package, LogOut } from "lucide-react";
+import { LayoutDashboard, Package, LogOut, UtensilsCrossed, ClipboardList, BarChart3, Boxes } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
   Sidebar,
@@ -16,6 +16,12 @@ import {
 const menuItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
   { title: "Estoque", url: "/admin/estoque", icon: Package },
+];
+
+const lanchoneteItems = [
+  { title: "Dashboard", url: "/admin/lanchonete", icon: BarChart3 },
+  { title: "Pedidos", url: "/admin/lanchonete/pedidos", icon: ClipboardList },
+  { title: "Estoque", url: "/admin/lanchonete/estoque", icon: Boxes },
 ];
 
 export function AdminSidebar() {
@@ -46,6 +52,32 @@ export function AdminSidebar() {
                     <NavLink
                       to={item.url}
                       end={item.url === "/admin"}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-all duration-200"
+                      activeClassName="bg-primary/10 text-primary font-medium border border-primary/20"
+                    >
+                      <item.icon className="h-5 w-5" />
+                      <span>{item.title}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-xs text-muted-foreground px-2 mb-2 flex items-center gap-2">
+            <UtensilsCrossed className="h-4 w-4" />
+            Lanchonete
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {lanchoneteItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to={item.url}
+                      end={item.url === "/admin/lanchonete"}
                       className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-all duration-200"
                       activeClassName="bg-primary/10 text-primary font-medium border border-primary/20"
                     >
