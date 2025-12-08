@@ -291,6 +291,24 @@ export type Database = {
         }
         Returns: boolean
       }
+      register_aluno: {
+        Args: {
+          p_alergias?: string
+          p_autoriza_imagem?: boolean
+          p_celular?: string
+          p_contato_emergencia?: string
+          p_cpf?: string
+          p_data_nascimento?: string
+          p_doencas?: string
+          p_email: string
+          p_endereco?: string
+          p_modalidades?: Json
+          p_nome: string
+          p_observacoes?: string
+          p_tipo_sanguineo?: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       app_role: "admin" | "aluno" | "lanchonete"
