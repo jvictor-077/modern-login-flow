@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import AdminDashboard from "./pages/AdminDashboard";
 import Estoque from "./pages/Estoque";
+import Mensalidades from "./pages/Mensalidades";
 import LanchoneteDashboard from "./pages/lanchonete/LanchoneteDashboard";
 import LanchonetePedidos from "./pages/lanchonete/LanchonetePedidos";
 import LanchoneteEstoque from "./pages/lanchonete/LanchoneteEstoque";
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/estoque" element={<Estoque />} />
+          <Route path="/admin/mensalidades" element={<Mensalidades />} />
           <Route path="/admin/lanchonete" element={<LanchoneteDashboard />} />
           <Route path="/admin/lanchonete/pedidos" element={<LanchonetePedidos />} />
           <Route path="/admin/lanchonete/estoque" element={<LanchoneteEstoque />} />
