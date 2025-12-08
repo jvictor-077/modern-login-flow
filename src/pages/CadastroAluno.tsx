@@ -25,91 +25,6 @@ import FloatingShapes from "@/components/FloatingShapes";
 import { precosModalidades, getPlanosModalidade, formatarPreco, matricula } from "@/data/precosData";
 import { TIPOS_SANGUINEOS } from "@/types/aluno";
 import { supabase } from "@/integrations/supabase/client";
-import { z } from "zod";
-
-// CPF validation helper - validates format and check digits
-const isValidCPF = (cpf: string): boolean => {
-  const cleanCPF = cpf.replace(/\D/g, '');
-  if (cleanCPF.length !== 11) return false;
-  
-  // Check for known invalid patterns (all same digits)
-  if (/^(\d)\1{10}$/.test(cleanCPF)) return false;
-  
-  // Validate first check digit
-  let sum = 0;
-  for (let i = 0; i < 9; i++) {
-    sum += parseInt(cleanCPF[i]) * (10 - i);
-  }
-  let remainder = (sum * 10) % 11;
-  if (remainder === 10 || remainder === 11) remainder = 0;
-  if (remainder !== parseInt(cleanCPF[9])) return false;
-  
-  // Validate second check digit
-  sum = 0;
-  for (let i = 0; i < 10; i++) {
-    sum += parseInt(cleanCPF[i]) * (11 - i);
-  }
-  remainder = (sum * 10) % 11;
-  if (remainder === 10 || remainder === 11) remainder = 0;
-  if (remainder !== parseInt(cleanCPF[10])) return false;
-  
-  return true;
-};
-
-// Phone validation helper for Brazilian format
-const isValidBrazilianPhone = (phone: string): boolean => {
-  const cleanPhone = phone.replace(/\D/g, '');
-  // Accept 10 or 11 digits (landline or mobile)
-  return cleanPhone.length >= 10 && cleanPhone.length <= 11;
-};
-
-// Sanitize text input to prevent XSS
-const sanitizeText = (text: string): string => {
-  return text
-    .replace(/[<>]/g, '') // Remove angle brackets
-    .trim()
-    .substring(0, 500); // Enforce max length
-};
-
-// Validation schema for the registration form
-const registrationSchema = z.object({
-  nome: z.string()
-    .trim()
-    .min(2, "Nome deve ter pelo menos 2 caracteres")
-    .max(100, "Nome deve ter no máximo 100 caracteres")
-    .regex(/^[a-zA-ZÀ-ÿ\s]+$/, "Nome deve conter apenas letras"),
-  email: z.string()
-    .trim()
-    .email("Email inválido")
-    .max(255, "Email deve ter no máximo 255 caracteres")
-    .toLowerCase(),
-  celular: z.string()
-    .trim()
-    .refine(isValidBrazilianPhone, "Celular inválido. Use formato: (00) 00000-0000"),
-  cpf: z.string()
-    .optional()
-    .refine((val) => !val || val.trim() === '' || isValidCPF(val), "CPF inválido"),
-  dataNascimento: z.string().optional(),
-  endereco: z.string()
-    .max(300, "Endereço deve ter no máximo 300 caracteres")
-    .optional(),
-  contatoEmergencia: z.string()
-    .max(200, "Contato de emergência deve ter no máximo 200 caracteres")
-    .optional(),
-  tipoSanguineo: z.string()
-    .refine((val) => !val || TIPOS_SANGUINEOS.includes(val as any), "Tipo sanguíneo inválido")
-    .optional(),
-  doencas: z.string()
-    .max(500, "Campo doenças deve ter no máximo 500 caracteres")
-    .optional(),
-  alergias: z.string()
-    .max(500, "Campo alergias deve ter no máximo 500 caracteres")
-    .optional(),
-  autorizacaoImagem: z.boolean().optional(),
-  observacoes: z.string()
-    .max(1000, "Observações devem ter no máximo 1000 caracteres")
-    .optional(),
-});
 
 const modalidadesDisponiveis = precosModalidades.map((m) => ({
   id: m.modalidade.toLowerCase().replace(/\s+/g, "_"),
@@ -166,12 +81,8 @@ const CadastroAluno = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate form data with Zod schema
-    const validationResult = registrationSchema.safeParse(formData);
-    
-    if (!validationResult.success) {
-      const firstError = validationResult.error.errors[0];
-      toast.error(firstError.message);
+    if (!formData.nome.trim() || !formData.email.trim() || !formData.celular.trim()) {
+      toast.error("Preencha todos os campos obrigatórios");
       return;
     }
 
@@ -186,63 +97,55 @@ const CadastroAluno = () => {
       return;
     }
 
-    // Validate modalities are from allowed list
-    const allowedModalities = precosModalidades.map(m => m.modalidade);
-    const invalidModality = modalidadesSelecionadas.find(m => !allowedModalities.includes(m.modalidade));
-    if (invalidModality) {
-      toast.error("Modalidade inválida selecionada");
-      return;
-    }
-
-    // Validate plans match allowed options
-    for (const m of modalidadesSelecionadas) {
-      const allowedPlans = getPlanosModalidade(m.modalidade).map(p => p.nome);
-      if (!allowedPlans.includes(m.plano)) {
-        toast.error(`Plano inválido para ${m.modalidade}`);
-        return;
-      }
-    }
-
     setIsSubmitting(true);
 
     try {
-      // Prepare modalidades with server-defined prices (prevent manipulation)
-      const modalidadesData = modalidadesSelecionadas.map(m => {
+      const { data: alunoData, error: alunoError } = await supabase
+        .from("alunos")
+        .insert({
+          nome: formData.nome.trim(),
+          email: formData.email.trim().toLowerCase(),
+          cpf: formData.cpf.trim() || null,
+          celular: formData.celular.trim() || null,
+          data_nascimento: formData.dataNascimento || null,
+          endereco: formData.endereco.trim() || null,
+          contato_emergencia: formData.contatoEmergencia.trim() || null,
+          tipo_sanguineo: formData.tipoSanguineo || null,
+          doencas: formData.doencas.trim() || null,
+          alergias: formData.alergias.trim() || null,
+          autoriza_imagem: formData.autorizacaoImagem,
+          observacoes: formData.observacoes.trim() || null,
+          situacao: "pendente",
+        })
+        .select("id")
+        .single();
+
+      if (alunoError) {
+        console.error("Erro ao cadastrar aluno:", alunoError);
+        if (alunoError.code === "23505") {
+          toast.error("Este email já está cadastrado");
+        } else {
+          toast.error("Erro ao enviar cadastro. Tente novamente.");
+        }
+        return;
+      }
+
+      const modalidadesInsert = modalidadesSelecionadas.map(m => {
         const planoInfo = getPlanosModalidade(m.modalidade).find(p => p.nome === m.plano);
         return {
+          aluno_id: alunoData.id,
           modalidade: m.modalidade,
           plano: m.plano,
           valor: planoInfo?.valor || 0,
         };
       });
 
-      // Use the secure SECURITY DEFINER function for registration
-      // This bypasses RLS and validates all inputs server-side
-      const { data, error } = await supabase.rpc('register_aluno', {
-        p_nome: sanitizeText(validationResult.data.nome),
-        p_email: validationResult.data.email.toLowerCase().trim(),
-        p_cpf: formData.cpf ? formData.cpf.replace(/\D/g, '') : null,
-        p_celular: formData.celular ? formData.celular.replace(/\D/g, '') : null,
-        p_data_nascimento: formData.dataNascimento || null,
-        p_endereco: formData.endereco ? sanitizeText(formData.endereco) : null,
-        p_contato_emergencia: formData.contatoEmergencia ? sanitizeText(formData.contatoEmergencia) : null,
-        p_tipo_sanguineo: formData.tipoSanguineo || null,
-        p_doencas: formData.doencas ? sanitizeText(formData.doencas) : null,
-        p_alergias: formData.alergias ? sanitizeText(formData.alergias) : null,
-        p_observacoes: formData.observacoes ? sanitizeText(formData.observacoes) : null,
-        p_autoriza_imagem: formData.autorizacaoImagem,
-        p_modalidades: modalidadesData,
-      });
+      const { error: modalidadesError } = await supabase
+        .from("aluno_modalidades")
+        .insert(modalidadesInsert);
 
-      if (error) {
-        if (error.message.includes('duplicate') || error.message.includes('23505')) {
-          toast.error("Este email já está cadastrado");
-        } else if (error.message.includes('inválido') || error.message.includes('inválida')) {
-          toast.error(error.message);
-        } else {
-          toast.error("Erro ao enviar cadastro. Tente novamente.");
-        }
-        return;
+      if (modalidadesError) {
+        console.error("Erro ao cadastrar modalidades:", modalidadesError);
       }
 
       toast.success("Cadastro enviado com sucesso!", {
@@ -251,6 +154,7 @@ const CadastroAluno = () => {
 
       navigate("/");
     } catch (error) {
+      console.error("Erro inesperado:", error);
       toast.error("Erro ao enviar cadastro. Tente novamente.");
     } finally {
       setIsSubmitting(false);

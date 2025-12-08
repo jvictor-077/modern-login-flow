@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,16 +30,14 @@ import {
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Search, UserPlus, Phone, User, CreditCard, MapPin, Heart, Calendar, CheckCircle, Loader2, RefreshCw } from "lucide-react";
+import { Plus, Search, UserPlus, Phone, User, CreditCard, MapPin, Heart, Calendar, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { TIPOS_SANGUINEOS } from "@/types/aluno";
 import { precosModalidades, getPlanosModalidade, formatarPreco, matricula } from "@/data/precosData";
-import { supabase } from "@/integrations/supabase/client";
 
 interface Modalidade {
   nome: string;
   plano: string;
-  valor?: number;
 }
 
 interface Aluno {
@@ -65,6 +63,46 @@ const modalidadesDisponiveis = precosModalidades.map((m) => m.modalidade);
 
 const tiposSanguineos = [...TIPOS_SANGUINEOS];
 
+const initialAlunos: Aluno[] = [
+  {
+    id: "1",
+    nome: "João Silva",
+    email: "joao@email.com",
+    cpf: "12345678900",
+    dataNascimento: "1990-05-15",
+    celular: "(11) 99999-1111",
+    endereco: "Rua das Flores, 123, Centro, São Paulo - SP, 01234-567",
+    contatoEmergencia: "Maria Silva - (11) 98888-1111",
+    tipoSanguineo: "O+",
+    doencas: "",
+    alergias: "",
+    modalidades: [{ nome: "Beach Tennis", plano: "Mensal" }],
+    observacoes: "",
+    autorizaImagem: true,
+    situacao: "em_dia",
+  },
+  {
+    id: "2",
+    nome: "Maria Santos",
+    email: "maria@email.com",
+    cpf: "98765432100",
+    dataNascimento: "1985-03-20",
+    celular: "(11) 99999-2222",
+    endereco: "Av. Brasil, 456, Jardins, São Paulo - SP, 04567-890",
+    contatoEmergencia: "Pedro Santos - (11) 98888-2222",
+    tipoSanguineo: "A+",
+    doencas: "",
+    alergias: "",
+    modalidades: [
+      { nome: "Vôlei Adulto Noite", plano: "1x por semana" },
+      { nome: "Beach Tennis", plano: "Trimestral" },
+    ],
+    observacoes: "",
+    autorizaImagem: true,
+    situacao: "pendente",
+  },
+];
+
 const emptyNovoAluno = {
   nome: "",
   email: "",
@@ -82,80 +120,12 @@ const emptyNovoAluno = {
 };
 
 export default function Mensalidades() {
-  const [alunos, setAlunos] = useState<Aluno[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [alunos, setAlunos] = useState<Aluno[]>(initialAlunos);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [novoAluno, setNovoAluno] = useState(emptyNovoAluno);
   const [selectedAluno, setSelectedAluno] = useState<Aluno | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-
-  // Fetch alunos from Supabase
-  const fetchAlunos = async () => {
-    setLoading(true);
-    try {
-      // Fetch alunos
-      const { data: alunosData, error: alunosError } = await supabase
-        .from('alunos')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (alunosError) {
-        console.error('Error fetching alunos:', alunosError);
-        toast.error('Erro ao carregar alunos');
-        return;
-      }
-
-      // Fetch modalidades for each aluno
-      const { data: modalidadesData, error: modalidadesError } = await supabase
-        .from('aluno_modalidades')
-        .select('*');
-
-      if (modalidadesError) {
-        console.error('Error fetching modalidades:', modalidadesError);
-      }
-
-      // Map the data to our Aluno interface
-      const mappedAlunos: Aluno[] = (alunosData || []).map(aluno => {
-        const alunoModalidades = (modalidadesData || [])
-          .filter(m => m.aluno_id === aluno.id)
-          .map(m => ({
-            nome: m.modalidade,
-            plano: m.plano,
-            valor: m.valor,
-          }));
-
-        return {
-          id: aluno.id,
-          nome: aluno.nome,
-          email: aluno.email,
-          cpf: aluno.cpf || '',
-          dataNascimento: aluno.data_nascimento || '',
-          celular: aluno.celular || '',
-          endereco: aluno.endereco || '',
-          contatoEmergencia: aluno.contato_emergencia || '',
-          tipoSanguineo: aluno.tipo_sanguineo || '',
-          doencas: aluno.doencas || '',
-          alergias: aluno.alergias || '',
-          modalidades: alunoModalidades,
-          observacoes: aluno.observacoes || '',
-          autorizaImagem: aluno.autoriza_imagem || false,
-          situacao: aluno.situacao as "em_dia" | "pendente" | "atrasado",
-        };
-      });
-
-      setAlunos(mappedAlunos);
-    } catch (error) {
-      console.error('Error:', error);
-      toast.error('Erro ao carregar dados');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchAlunos();
-  }, []);
 
   const handleAlunoClick = (aluno: Aluno) => {
     setSelectedAluno(aluno);
@@ -178,7 +148,7 @@ export default function Mensalidades() {
     });
   };
 
-  const handleAddAluno = async () => {
+  const handleAddAluno = () => {
     if (
       !novoAluno.nome ||
       !novoAluno.email ||
@@ -197,48 +167,32 @@ export default function Mensalidades() {
       return;
     }
 
-    try {
-      const modalidadesData = Object.entries(novoAluno.modalidades).map(
-        ([modalidade, plano]) => {
-          const planoInfo = getPlanosModalidade(modalidade).find(p => p.nome === plano);
-          return {
-            modalidade,
-            plano,
-            valor: planoInfo?.valor || 0,
-          };
-        }
-      );
+    const modalidadesArray: Modalidade[] = Object.entries(novoAluno.modalidades).map(
+      ([nome, plano]) => ({ nome, plano })
+    );
 
-      const { data, error } = await supabase.rpc('register_aluno', {
-        p_nome: novoAluno.nome,
-        p_email: novoAluno.email.toLowerCase().trim(),
-        p_cpf: novoAluno.cpf.replace(/\D/g, ''),
-        p_celular: novoAluno.celular,
-        p_data_nascimento: novoAluno.dataNascimento,
-        p_endereco: novoAluno.endereco,
-        p_contato_emergencia: novoAluno.contatoEmergencia,
-        p_tipo_sanguineo: novoAluno.tipoSanguineo,
-        p_doencas: novoAluno.doencas,
-        p_alergias: novoAluno.alergias,
-        p_observacoes: novoAluno.observacoes,
-        p_autoriza_imagem: novoAluno.autorizaImagem,
-        p_modalidades: modalidadesData,
-      });
+    const newAluno: Aluno = {
+      id: Date.now().toString(),
+      nome: novoAluno.nome,
+      email: novoAluno.email,
+      cpf: novoAluno.cpf,
+      dataNascimento: novoAluno.dataNascimento,
+      celular: novoAluno.celular,
+      endereco: novoAluno.endereco,
+      contatoEmergencia: novoAluno.contatoEmergencia,
+      tipoSanguineo: novoAluno.tipoSanguineo,
+      doencas: novoAluno.doencas,
+      alergias: novoAluno.alergias,
+      modalidades: modalidadesArray,
+      observacoes: novoAluno.observacoes,
+      autorizaImagem: novoAluno.autorizaImagem,
+      situacao: "pendente",
+    };
 
-      if (error) {
-        console.error('Error adding aluno:', error);
-        toast.error(error.message || "Erro ao cadastrar aluno");
-        return;
-      }
-
-      setNovoAluno(emptyNovoAluno);
-      setIsDialogOpen(false);
-      toast.success("Aluno cadastrado com sucesso!");
-      fetchAlunos(); // Refresh the list
-    } catch (error) {
-      console.error('Error:', error);
-      toast.error("Erro ao cadastrar aluno");
-    }
+    setAlunos([...alunos, newAluno]);
+    setNovoAluno(emptyNovoAluno);
+    setIsDialogOpen(false);
+    toast.success("Aluno cadastrado com sucesso!");
   };
 
   const getSituacaoBadge = (situacao: Aluno["situacao"]) => {
@@ -252,40 +206,10 @@ export default function Mensalidades() {
     }
   };
 
-  const updateSituacao = async (id: string, situacao: Aluno["situacao"]) => {
-    try {
-      const { error } = await supabase
-        .from('alunos')
-        .update({ situacao })
-        .eq('id', id);
-
-      if (error) {
-        console.error('Error updating situacao:', error);
-        toast.error("Erro ao atualizar situação");
-        return;
-      }
-
-      setAlunos(alunos.map((a) => (a.id === id ? { ...a, situacao } : a)));
-      toast.success("Situação atualizada!");
-    } catch (error) {
-      console.error('Error:', error);
-      toast.error("Erro ao atualizar situação");
-    }
+  const updateSituacao = (id: string, situacao: Aluno["situacao"]) => {
+    setAlunos(alunos.map((a) => (a.id === id ? { ...a, situacao } : a)));
+    toast.success("Situação atualizada!");
   };
-
-  const confirmarMatricula = async (id: string) => {
-    await updateSituacao(id, "em_dia");
-  };
-
-  if (loading) {
-    return (
-      <AdminLayout title="Mensalidades">
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </AdminLayout>
-    );
-  }
 
   return (
     <AdminLayout title="Mensalidades">
@@ -302,556 +226,558 @@ export default function Mensalidades() {
             />
           </div>
 
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={fetchAlunos} className="gap-2">
-              <RefreshCw className="h-4 w-4" />
-              Atualizar
-            </Button>
-
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="gap-2">
-                  <UserPlus className="h-4 w-4" />
-                  Novo Aluno
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] p-4 sm:p-6">
-                <DialogHeader>
-                  <DialogTitle>Cadastrar Novo Aluno</DialogTitle>
-                </DialogHeader>
-                <ScrollArea className="max-h-[70vh] pr-4">
-                  <div className="space-y-6 pt-4">
-                    {/* Dados Pessoais */}
-                    <div className="space-y-4">
-                      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-                        Dados Pessoais
-                      </h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="nome">Nome Completo *</Label>
-                          <Input
-                            id="nome"
-                            value={novoAluno.nome}
-                            onChange={(e) =>
-                              setNovoAluno({ ...novoAluno, nome: e.target.value })
-                            }
-                            placeholder="Nome completo"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="email">E-mail *</Label>
-                          <Input
-                            id="email"
-                            type="email"
-                            value={novoAluno.email}
-                            onChange={(e) =>
-                              setNovoAluno({ ...novoAluno, email: e.target.value })
-                            }
-                            placeholder="email@exemplo.com"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="cpf">CPF (apenas números) *</Label>
-                          <Input
-                            id="cpf"
-                            value={novoAluno.cpf}
-                            onChange={(e) =>
-                              setNovoAluno({ ...novoAluno, cpf: e.target.value.replace(/\D/g, '') })
-                            }
-                            placeholder="00000000000"
-                            maxLength={11}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="dataNascimento">Data de Nascimento *</Label>
-                          <Input
-                            id="dataNascimento"
-                            type="date"
-                            value={novoAluno.dataNascimento}
-                            onChange={(e) =>
-                              setNovoAluno({ ...novoAluno, dataNascimento: e.target.value })
-                            }
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="celular">Celular (WhatsApp) *</Label>
-                          <Input
-                            id="celular"
-                            value={novoAluno.celular}
-                            onChange={(e) =>
-                              setNovoAluno({ ...novoAluno, celular: e.target.value })
-                            }
-                            placeholder="(00) 00000-0000"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="tipoSanguineo">Tipo Sanguíneo *</Label>
-                          <Select
-                            value={novoAluno.tipoSanguineo}
-                            onValueChange={(value) =>
-                              setNovoAluno({ ...novoAluno, tipoSanguineo: value })
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-popover">
-                              {tiposSanguineos.map((tipo) => (
-                                <SelectItem key={tipo} value={tipo}>
-                                  {tipo}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <UserPlus className="h-4 w-4" />
+                Novo Aluno
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] p-4 sm:p-6">
+              <DialogHeader>
+                <DialogTitle>Cadastrar Novo Aluno</DialogTitle>
+              </DialogHeader>
+              <ScrollArea className="max-h-[70vh] pr-4">
+                <div className="space-y-6 pt-4">
+                  {/* Dados Pessoais */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                      Dados Pessoais
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="endereco">
-                          Endereço Residencial (rua, número, complemento, bairro, cidade e CEP)
-                        </Label>
-                        <Textarea
-                          id="endereco"
-                          value={novoAluno.endereco}
-                          onChange={(e) =>
-                            setNovoAluno({ ...novoAluno, endereco: e.target.value })
-                          }
-                          placeholder="Rua, número, complemento, bairro, cidade - UF, CEP"
-                          rows={2}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Contato de Emergência */}
-                    <div className="space-y-4">
-                      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-                        Contato de Emergência
-                      </h3>
-                      <div className="space-y-2">
-                        <Label htmlFor="contatoEmergencia">
-                          Pessoa de contato para emergência (Nome + celular com DDD) *
-                        </Label>
+                        <Label htmlFor="nome">Nome Completo *</Label>
                         <Input
-                          id="contatoEmergencia"
-                          value={novoAluno.contatoEmergencia}
+                          id="nome"
+                          value={novoAluno.nome}
                           onChange={(e) =>
-                            setNovoAluno({ ...novoAluno, contatoEmergencia: e.target.value })
+                            setNovoAluno({ ...novoAluno, nome: e.target.value })
                           }
-                          placeholder="Nome - (00) 00000-0000"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Informações de Saúde */}
-                    <div className="space-y-4">
-                      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-                        Informações de Saúde
-                      </h3>
-                      <div className="space-y-2">
-                        <Label htmlFor="doencas">
-                          Informar, se houver, doenças ou lesões pré-existentes
-                        </Label>
-                        <Textarea
-                          id="doencas"
-                          value={novoAluno.doencas}
-                          onChange={(e) =>
-                            setNovoAluno({ ...novoAluno, doencas: e.target.value })
-                          }
-                          placeholder="Descreva se houver..."
-                          rows={2}
+                          placeholder="Nome completo"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="alergias">Alergias? (preencher se tiver)</Label>
+                        <Label htmlFor="email">E-mail *</Label>
                         <Input
-                          id="alergias"
-                          value={novoAluno.alergias}
+                          id="email"
+                          type="email"
+                          value={novoAluno.email}
                           onChange={(e) =>
-                            setNovoAluno({ ...novoAluno, alergias: e.target.value })
+                            setNovoAluno({ ...novoAluno, email: e.target.value })
                           }
-                          placeholder="Descreva se houver..."
+                          placeholder="email@exemplo.com"
                         />
                       </div>
-                    </div>
-
-                    {/* Modalidades */}
-                    <div className="space-y-4">
-                      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-                        Qual modalidade deseja treinar? *
-                      </h3>
-                      <p className="text-xs text-muted-foreground">
-                        Obs: você pode selecionar mais de 1 modalidade.
-                      </p>
-                    {/* Desktop: Card layout por modalidade */}
-                      <div className="hidden sm:block space-y-4">
-                        {modalidadesDisponiveis.map((modalidade) => {
-                          const planos = getPlanosModalidade(modalidade);
-                          return (
-                            <div key={modalidade} className="border border-border/50 rounded-lg p-4">
-                              <p className="font-medium mb-3">{modalidade}</p>
-                              <div className="flex flex-wrap gap-3">
-                                {planos.map((plano) => (
-                                  <label
-                                    key={plano.nome}
-                                    className={`flex items-center gap-2 p-2 px-3 rounded-lg border cursor-pointer transition-colors ${
-                                      novoAluno.modalidades[modalidade] === plano.nome
-                                        ? "border-primary bg-primary/10"
-                                        : "border-border/50 hover:border-border"
-                                    }`}
-                                  >
-                                    <Checkbox
-                                      checked={novoAluno.modalidades[modalidade] === plano.nome}
-                                      onCheckedChange={(checked) =>
-                                        handleModalidadeChange(modalidade, checked ? plano.nome : "")
-                                      }
-                                    />
-                                    <span className="text-sm">
-                                      {plano.nome} - {formatarPreco(plano.valor)}
-                                    </span>
-                                  </label>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        })}
+                      <div className="space-y-2">
+                        <Label htmlFor="cpf">CPF (apenas números) *</Label>
+                        <Input
+                          id="cpf"
+                          value={novoAluno.cpf}
+                          onChange={(e) =>
+                            setNovoAluno({ ...novoAluno, cpf: e.target.value.replace(/\D/g, '') })
+                          }
+                          placeholder="00000000000"
+                          maxLength={11}
+                        />
                       </div>
-                      
-                      {/* Mobile: Card layout */}
-                      <div className="sm:hidden space-y-4">
-                        {modalidadesDisponiveis.map((modalidade) => {
-                          const planos = getPlanosModalidade(modalidade);
-                          return (
-                            <div key={modalidade} className="border border-border/50 rounded-lg p-3 space-y-2">
-                              <p className="font-medium text-sm">{modalidade}</p>
-                              <Select
-                                value={novoAluno.modalidades[modalidade] || "none"}
-                                onValueChange={(value) => handleModalidadeChange(modalidade, value === "none" ? "" : value)}
-                              >
-                                <SelectTrigger className="w-full">
-                                  <SelectValue placeholder="Selecione um plano" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-popover">
-                                  <SelectItem value="none">Não selecionado</SelectItem>
-                                  {planos.map((plano) => (
-                                    <SelectItem key={plano.nome} value={plano.nome}>
-                                      {plano.nome} - {formatarPreco(plano.valor)}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          );
-                        })}
+                      <div className="space-y-2">
+                        <Label htmlFor="dataNascimento">Data de Nascimento *</Label>
+                        <Input
+                          id="dataNascimento"
+                          type="date"
+                          value={novoAluno.dataNascimento}
+                          onChange={(e) =>
+                            setNovoAluno({ ...novoAluno, dataNascimento: e.target.value })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="celular">Celular (WhatsApp) *</Label>
+                        <Input
+                          id="celular"
+                          value={novoAluno.celular}
+                          onChange={(e) =>
+                            setNovoAluno({ ...novoAluno, celular: e.target.value })
+                          }
+                          placeholder="(00) 00000-0000"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="tipoSanguineo">Tipo Sanguíneo *</Label>
+                        <Select
+                          value={novoAluno.tipoSanguineo}
+                          onValueChange={(value) =>
+                            setNovoAluno({ ...novoAluno, tipoSanguineo: value })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover">
+                            {tiposSanguineos.map((tipo) => (
+                              <SelectItem key={tipo} value={tipo}>
+                                {tipo}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
-
-                    {/* Observações */}
-                    <div className="space-y-4">
-                      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-                        Observações
-                      </h3>
+                    <div className="space-y-2">
+                      <Label htmlFor="endereco">
+                        Endereço Residencial (rua, número, complemento, bairro, cidade e CEP)
+                      </Label>
                       <Textarea
+                        id="endereco"
+                        value={novoAluno.endereco}
+                        onChange={(e) =>
+                          setNovoAluno({ ...novoAluno, endereco: e.target.value })
+                        }
+                        placeholder="Rua, número, complemento, bairro, cidade - UF, CEP"
+                        rows={2}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Contato de Emergência */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                      Contato de Emergência
+                    </h3>
+                    <div className="space-y-2">
+                      <Label htmlFor="contatoEmergencia">
+                        Pessoa de contato para emergência (Nome + celular com DDD) *
+                      </Label>
+                      <Input
+                        id="contatoEmergencia"
+                        value={novoAluno.contatoEmergencia}
+                        onChange={(e) =>
+                          setNovoAluno({ ...novoAluno, contatoEmergencia: e.target.value })
+                        }
+                        placeholder="Nome - (00) 00000-0000"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Informações de Saúde */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                      Informações de Saúde
+                    </h3>
+                    <div className="space-y-2">
+                      <Label htmlFor="doencas">
+                        Informar, se houver, doenças ou lesões pré-existentes
+                      </Label>
+                      <Textarea
+                        id="doencas"
+                        value={novoAluno.doencas}
+                        onChange={(e) =>
+                          setNovoAluno({ ...novoAluno, doencas: e.target.value })
+                        }
+                        placeholder="Descreva se houver..."
+                        rows={2}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="alergias">Alergias? (preencher se tiver)</Label>
+                      <Input
+                        id="alergias"
+                        value={novoAluno.alergias}
+                        onChange={(e) =>
+                          setNovoAluno({ ...novoAluno, alergias: e.target.value })
+                        }
+                        placeholder="Descreva se houver..."
+                      />
+                    </div>
+                  </div>
+
+                  {/* Modalidades */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                      Qual modalidade deseja treinar? *
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      Obs: você pode selecionar mais de 1 modalidade.
+                    </p>
+                  {/* Desktop: Card layout por modalidade */}
+                    <div className="hidden sm:block space-y-4">
+                      {modalidadesDisponiveis.map((modalidade) => {
+                        const planos = getPlanosModalidade(modalidade);
+                        return (
+                          <div key={modalidade} className="border border-border/50 rounded-lg p-4">
+                            <p className="font-medium mb-3">{modalidade}</p>
+                            <div className="flex flex-wrap gap-3">
+                              {planos.map((plano) => (
+                                <label
+                                  key={plano.nome}
+                                  className={`flex items-center gap-2 p-2 px-3 rounded-lg border cursor-pointer transition-colors ${
+                                    novoAluno.modalidades[modalidade] === plano.nome
+                                      ? "border-primary bg-primary/10"
+                                      : "border-border/50 hover:border-border"
+                                  }`}
+                                >
+                                  <Checkbox
+                                    checked={novoAluno.modalidades[modalidade] === plano.nome}
+                                    onCheckedChange={(checked) =>
+                                      handleModalidadeChange(modalidade, checked ? plano.nome : "")
+                                    }
+                                  />
+                                  <span className="text-sm">
+                                    {plano.nome} - {formatarPreco(plano.valor)}
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Mobile: Card layout */}
+                    <div className="sm:hidden space-y-4">
+                      {modalidadesDisponiveis.map((modalidade) => {
+                        const planos = getPlanosModalidade(modalidade);
+                        return (
+                          <div key={modalidade} className="border border-border/50 rounded-lg p-3 space-y-2">
+                            <p className="font-medium text-sm">{modalidade}</p>
+                            <Select
+                              value={novoAluno.modalidades[modalidade] || "none"}
+                              onValueChange={(value) => handleModalidadeChange(modalidade, value === "none" ? "" : value)}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Selecione um plano" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-popover">
+                                <SelectItem value="none">Nenhum</SelectItem>
+                                {planos.map((plano) => (
+                                  <SelectItem key={plano.nome} value={plano.nome}>
+                                    {plano.nome} - {formatarPreco(plano.valor)}
+                                  </SelectItem>
+                                ))}
+                                
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Info Matrícula */}
+                    <div className="p-3 rounded-lg bg-primary/10 border border-primary/30">
+                      <p className="text-sm font-medium">
+                        Taxa de Matrícula: {formatarPreco(matricula.valor)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{matricula.descricao}</p>
+                    </div>
+                  </div>
+
+                  {/* Observações */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="observacoes">
+                        Há alguma observação que deseje fazer?
+                      </Label>
+                      <Textarea
+                        id="observacoes"
                         value={novoAluno.observacoes}
                         onChange={(e) =>
                           setNovoAluno({ ...novoAluno, observacoes: e.target.value })
                         }
-                        placeholder="Alguma observação adicional?"
-                        rows={3}
+                        placeholder="Observações adicionais..."
+                        rows={2}
                       />
                     </div>
+                  </div>
 
-                    {/* Autorização de Imagem */}
-                    <div className="flex items-start gap-3 p-4 border border-border/50 rounded-lg">
+                  {/* Autorização de Imagem */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                      Autorização de Imagem *
+                    </h3>
+                    <div className="flex items-start space-x-3">
                       <Checkbox
                         id="autorizaImagem"
                         checked={novoAluno.autorizaImagem}
                         onCheckedChange={(checked) =>
-                          setNovoAluno({ ...novoAluno, autorizaImagem: checked as boolean })
+                          setNovoAluno({ ...novoAluno, autorizaImagem: !!checked })
                         }
                       />
-                      <div className="space-y-1">
-                        <Label htmlFor="autorizaImagem" className="cursor-pointer">
-                          Autorização de uso de imagem
-                        </Label>
-                        <p className="text-xs text-muted-foreground">
-                          Autorizo o uso de minha imagem para divulgação nas redes sociais da
-                          arena.
-                        </p>
-                      </div>
+                      <label htmlFor="autorizaImagem" className="text-sm leading-relaxed">
+                        Autorizo a utilizar minha imagem para a finalidade de postar fotos e
+                        vídeos no Instagram como divulgação.
+                      </label>
                     </div>
-
-                    <Button onClick={handleAddAluno} className="w-full gap-2">
-                      <UserPlus className="h-4 w-4" />
-                      Cadastrar Aluno
-                    </Button>
                   </div>
-                </ScrollArea>
-              </DialogContent>
-            </Dialog>
-          </div>
+
+                  <Button onClick={handleAddAluno} className="w-full gap-2">
+                    <Plus className="h-4 w-4" />
+                    Cadastrar Aluno
+                  </Button>
+                </div>
+              </ScrollArea>
+            </DialogContent>
+          </Dialog>
         </div>
 
-        {/* Tabs para filtrar por situação */}
-        <Tabs defaultValue="todos" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
-            <TabsTrigger value="todos">Todos ({alunos.length})</TabsTrigger>
-            <TabsTrigger value="pendente">
-              Pendentes ({alunos.filter((a) => a.situacao === "pendente").length})
-            </TabsTrigger>
-            <TabsTrigger value="em_dia">
-              Em dia ({alunos.filter((a) => a.situacao === "em_dia").length})
-            </TabsTrigger>
-            <TabsTrigger value="atrasado">
-              Atrasados ({alunos.filter((a) => a.situacao === "atrasado").length})
-            </TabsTrigger>
-          </TabsList>
-
-          {["todos", "pendente", "em_dia", "atrasado"].map((tab) => (
-            <TabsContent key={tab} value={tab} className="mt-4">
-              <div className="rounded-lg border border-border/50 overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-card/50">
-                      <TableHead>Aluno</TableHead>
-                      <TableHead className="hidden md:table-cell">Modalidades</TableHead>
-                      <TableHead className="hidden sm:table-cell">Contato</TableHead>
-                      <TableHead>Situação</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredAlunos
-                      .filter((a) => tab === "todos" || a.situacao === tab)
-                      .map((aluno) => (
-                        <TableRow 
-                          key={aluno.id} 
-                          className="cursor-pointer hover:bg-card/30"
-                          onClick={() => handleAlunoClick(aluno)}
-                        >
-                          <TableCell>
-                            <div>
-                              <p className="font-medium">{aluno.nome}</p>
-                              <p className="text-sm text-muted-foreground">{aluno.email}</p>
-                            </div>
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            <div className="flex flex-wrap gap-1">
-                              {aluno.modalidades.map((m, i) => (
-                                <Badge
-                                  key={i}
-                                  variant="outline"
-                                  className="text-xs"
-                                >
-                                  {m.nome}
-                                </Badge>
-                              ))}
-                            </div>
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell">
-                            {aluno.celular}
-                          </TableCell>
-                          <TableCell>{getSituacaoBadge(aluno.situacao)}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                              {aluno.situacao === "pendente" && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => confirmarMatricula(aluno.id)}
-                                  className="gap-1"
-                                >
-                                  <CheckCircle className="h-3 w-3" />
-                                  Confirmar
-                                </Button>
-                              )}
-                              <Select
-                                value={aluno.situacao}
-                                onValueChange={(value) =>
-                                  updateSituacao(aluno.id, value as Aluno["situacao"])
-                                }
-                              >
-                                <SelectTrigger className="w-[120px] h-8">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent className="bg-popover">
-                                  <SelectItem value="em_dia">Em dia</SelectItem>
-                                  <SelectItem value="pendente">Pendente</SelectItem>
-                                  <SelectItem value="atrasado">Atrasado</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </TableCell>
-                        </TableRow>
+        {/* Tabela de alunos */}
+        <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent border-border/50">
+                <TableHead className="text-muted-foreground">Nome</TableHead>
+                <TableHead className="text-muted-foreground hidden md:table-cell">Celular</TableHead>
+                <TableHead className="text-muted-foreground hidden md:table-cell">Modalidades</TableHead>
+                <TableHead className="text-muted-foreground">Situação</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredAlunos.map((aluno) => (
+                <TableRow 
+                  key={aluno.id} 
+                  className="border-border/50 cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleAlunoClick(aluno)}
+                >
+                  <TableCell className="font-medium">{aluno.nome}</TableCell>
+                  <TableCell className="text-muted-foreground hidden md:table-cell">{aluno.celular}</TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    <div className="flex flex-wrap gap-1">
+                      {aluno.modalidades.map((mod) => (
+                        <Badge key={mod.nome} variant="outline" className="text-xs">
+                          {mod.nome}
+                        </Badge>
                       ))}
-                    {filteredAlunos.filter((a) => tab === "todos" || a.situacao === tab)
-                      .length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                          Nenhum aluno encontrado
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </TabsContent>
-          ))}
-        </Tabs>
+                    </div>
+                  </TableCell>
+                  <TableCell>{getSituacaoBadge(aluno.situacao)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
 
-        {/* Modal de detalhes do aluno */}
+        {/* Modal de Detalhes do Aluno */}
         <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
           <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] p-4 sm:p-6">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <User className="h-5 w-5 text-primary" />
+                <User className="h-5 w-5" />
                 {selectedAluno?.nome}
               </DialogTitle>
             </DialogHeader>
             {selectedAluno && (
-              <ScrollArea className="max-h-[70vh] pr-4">
-                <div className="space-y-6 pt-4">
-                  {/* Situação e Ações */}
-                  <div className="flex items-center justify-between p-4 border border-border/50 rounded-lg bg-card/30">
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm text-muted-foreground">Status:</span>
-                      {getSituacaoBadge(selectedAluno.situacao)}
+              <Tabs defaultValue="mensalidades" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="mensalidades" className="text-xs sm:text-sm">
+                    <CreditCard className="h-4 w-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Mensalidades</span>
+                    <span className="sm:hidden">Mensalid.</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="contato" className="text-xs sm:text-sm">
+                    <Phone className="h-4 w-4 mr-1 sm:mr-2" />
+                    Contato
+                  </TabsTrigger>
+                  <TabsTrigger value="pessoal" className="text-xs sm:text-sm">
+                    <User className="h-4 w-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Info. Pessoais</span>
+                    <span className="sm:hidden">Pessoal</span>
+                  </TabsTrigger>
+                </TabsList>
+
+                <ScrollArea className="max-h-[60vh] mt-4">
+                  {/* Aba Mensalidades */}
+                  <TabsContent value="mensalidades" className="space-y-4">
+                    <div className="flex items-center justify-between p-4 rounded-lg bg-muted/30 border border-border/50">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Situação Atual</p>
+                        <div className="mt-1">{getSituacaoBadge(selectedAluno.situacao)}</div>
+                      </div>
+                      <Select
+                        value={selectedAluno.situacao}
+                        onValueChange={(value: Aluno["situacao"]) => {
+                          updateSituacao(selectedAluno.id, value);
+                          setSelectedAluno({ ...selectedAluno, situacao: value });
+                        }}
+                      >
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover">
+                          <SelectItem value="em_dia">Em dia</SelectItem>
+                          <SelectItem value="pendente">Pendente</SelectItem>
+                          <SelectItem value="atrasado">Atrasado</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
+
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                        Modalidades Matriculadas
+                      </h4>
+                      {selectedAluno.modalidades.length > 0 ? (
+                        <div className="space-y-2">
+                          {selectedAluno.modalidades.map((mod) => (
+                            <div
+                              key={mod.nome}
+                              className="flex justify-between items-center p-3 rounded-lg bg-muted/20 border border-border/30"
+                            >
+                              <span className="font-medium">{mod.nome}</span>
+                              <Badge variant="outline">{mod.plano}</Badge>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground text-sm">Nenhuma modalidade cadastrada</p>
+                      )}
+                    </div>
+
                     {selectedAluno.situacao === "pendente" && (
                       <Button
                         onClick={() => {
-                          confirmarMatricula(selectedAluno.id);
+                          updateSituacao(selectedAluno.id, "em_dia");
                           setSelectedAluno({ ...selectedAluno, situacao: "em_dia" });
+                          toast.success("Matrícula confirmada com sucesso!");
                         }}
-                        className="gap-2"
+                        className="w-full gap-2 bg-green-600 hover:bg-green-700"
                       >
                         <CheckCircle className="h-4 w-4" />
                         Confirmar Matrícula
                       </Button>
                     )}
-                  </div>
+                  </TabsContent>
 
-                  {/* Dados Pessoais */}
-                  <div className="space-y-3">
-                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      Dados Pessoais
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Email:</span>
-                        <p className="font-medium">{selectedAluno.email}</p>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">CPF:</span>
-                        <p className="font-medium">{selectedAluno.cpf || "-"}</p>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Data de Nascimento:</span>
-                        <p className="font-medium">{selectedAluno.dataNascimento || "-"}</p>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Tipo Sanguíneo:</span>
-                        <p className="font-medium">{selectedAluno.tipoSanguineo || "-"}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Contato */}
-                  <div className="space-y-3">
-                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-                      <Phone className="h-4 w-4" />
-                      Contato
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Celular:</span>
-                        <p className="font-medium">{selectedAluno.celular || "-"}</p>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Emergência:</span>
-                        <p className="font-medium">{selectedAluno.contatoEmergencia || "-"}</p>
-                      </div>
-                    </div>
-                    {selectedAluno.endereco && (
-                      <div className="flex items-start gap-2 text-sm">
-                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                        <p>{selectedAluno.endereco}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Modalidades */}
-                  <div className="space-y-3">
-                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      Modalidades
-                    </h3>
-                    <div className="space-y-2">
-                      {selectedAluno.modalidades.map((m, i) => (
-                        <div
-                          key={i}
-                          className="flex items-center justify-between p-3 border border-border/50 rounded-lg"
-                        >
-                          <div>
-                            <p className="font-medium">{m.nome}</p>
-                            <p className="text-sm text-muted-foreground">{m.plano}</p>
-                          </div>
-                          {m.valor && (
-                            <span className="text-primary font-semibold">
-                              {formatarPreco(m.valor)}
-                            </span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Saúde */}
-                  {(selectedAluno.doencas || selectedAluno.alergias) && (
+                  {/* Aba Contato */}
+                  <TabsContent value="contato" className="space-y-4">
                     <div className="space-y-3">
-                      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-                        <Heart className="h-4 w-4" />
-                        Informações de Saúde
-                      </h3>
-                      <div className="space-y-2 text-sm">
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/20 border border-border/30">
+                        <Phone className="h-5 w-5 text-primary mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Celular (WhatsApp)</p>
+                          <p className="font-medium">{selectedAluno.celular}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/20 border border-border/30">
+                        <User className="h-5 w-5 text-primary mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">E-mail</p>
+                          <p className="font-medium">{selectedAluno.email}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/20 border border-border/30">
+                        <MapPin className="h-5 w-5 text-primary mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Endereço</p>
+                          <p className="font-medium">{selectedAluno.endereco || "Não informado"}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/20 border border-border/30">
+                        <Phone className="h-5 w-5 text-red-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Contato de Emergência</p>
+                          <p className="font-medium">{selectedAluno.contatoEmergencia}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  {/* Aba Informações Pessoais */}
+                  <TabsContent value="pessoal" className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/20 border border-border/30">
+                        <User className="h-5 w-5 text-primary mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">CPF</p>
+                          <p className="font-medium">{selectedAluno.cpf}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/20 border border-border/30">
+                        <Calendar className="h-5 w-5 text-primary mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Data de Nascimento</p>
+                          <p className="font-medium">
+                            {new Date(selectedAluno.dataNascimento).toLocaleDateString("pt-BR")}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/20 border border-border/30">
+                        <Heart className="h-5 w-5 text-red-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Tipo Sanguíneo</p>
+                          <p className="font-medium">{selectedAluno.tipoSanguineo}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/20 border border-border/30">
+                        <User className="h-5 w-5 text-primary mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Autoriza Imagem</p>
+                          <p className="font-medium">{selectedAluno.autorizaImagem ? "Sim" : "Não"}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {(selectedAluno.doencas || selectedAluno.alergias) && (
+                      <div className="space-y-3">
+                        <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                          Informações de Saúde
+                        </h4>
                         {selectedAluno.doencas && (
-                          <div>
-                            <span className="text-muted-foreground">Doenças/Condições:</span>
-                            <p>{selectedAluno.doencas}</p>
+                          <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                            <p className="text-sm text-muted-foreground">Doenças/Lesões</p>
+                            <p className="font-medium">{selectedAluno.doencas}</p>
                           </div>
                         )}
                         {selectedAluno.alergias && (
-                          <div>
-                            <span className="text-muted-foreground">Alergias:</span>
-                            <p>{selectedAluno.alergias}</p>
+                          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                            <p className="text-sm text-muted-foreground">Alergias</p>
+                            <p className="font-medium">{selectedAluno.alergias}</p>
                           </div>
                         )}
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Observações */}
-                  {selectedAluno.observacoes && (
-                    <div className="space-y-3">
-                      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-                        Observações
-                      </h3>
-                      <p className="text-sm">{selectedAluno.observacoes}</p>
-                    </div>
-                  )}
-
-                  {/* Autorização de Imagem */}
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Checkbox checked={selectedAluno.autorizaImagem} disabled />
-                    <span>
-                      {selectedAluno.autorizaImagem
-                        ? "Autorizou uso de imagem"
-                        : "Não autorizou uso de imagem"}
-                    </span>
-                  </div>
-                </div>
-              </ScrollArea>
+                    {selectedAluno.observacoes && (
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                          Observações
+                        </h4>
+                        <p className="p-3 rounded-lg bg-muted/20 border border-border/30">
+                          {selectedAluno.observacoes}
+                        </p>
+                      </div>
+                    )}
+                  </TabsContent>
+                </ScrollArea>
+              </Tabs>
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Resumo */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
+            <p className="text-sm text-muted-foreground">Em dia</p>
+            <p className="text-2xl font-bold text-green-400">
+              {alunos.filter((a) => a.situacao === "em_dia").length}
+            </p>
+          </div>
+          <div className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+            <p className="text-sm text-muted-foreground">Pendentes</p>
+            <p className="text-2xl font-bold text-yellow-400">
+              {alunos.filter((a) => a.situacao === "pendente").length}
+            </p>
+          </div>
+          <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+            <p className="text-sm text-muted-foreground">Atrasados</p>
+            <p className="text-2xl font-bold text-red-400">
+              {alunos.filter((a) => a.situacao === "atrasado").length}
+            </p>
+          </div>
+        </div>
       </div>
     </AdminLayout>
   );
