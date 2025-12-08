@@ -1,29 +1,15 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
   Calendar,
   Clock, 
   MapPin,
-  Trash2,
-  CalendarCheck,
-  AlertCircle
+  CalendarCheck
 } from "lucide-react";
-import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 
 // Reservas mockadas do usuário
 const reservasMock = [
@@ -72,15 +58,9 @@ const reservasMock = [
 type Reserva = typeof reservasMock[0];
 
 const MinhasReservas = () => {
-  const [reservas, setReservas] = useState<Reserva[]>(reservasMock);
   const [filtro, setFiltro] = useState<"todas" | "confirmada" | "concluida">("todas");
 
-  const handleCancelarReserva = (id: number) => {
-    setReservas(prev => prev.filter(r => r.id !== id));
-    toast.success("Reserva cancelada com sucesso!");
-  };
-
-  const reservasFiltradas = reservas.filter(r => {
+  const reservasFiltradas = reservasMock.filter(r => {
     if (filtro === "todas") return true;
     return r.status === filtro;
   });
@@ -99,10 +79,6 @@ const MinhasReservas = () => {
         Concluída
       </Badge>
     );
-  };
-
-  const isReservaFutura = (data: Date) => {
-    return data >= new Date();
   };
 
   return (
@@ -179,38 +155,6 @@ const MinhasReservas = () => {
                       </div>
                     </div>
                   </div>
-
-                  {reserva.status === "confirmada" && isReservaFutura(reserva.data) && (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Cancelar
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Cancelar Reserva</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Tem certeza que deseja cancelar esta reserva?
-                            <br />
-                            <strong>
-                              {format(reserva.data, "dd 'de' MMMM", { locale: ptBR })} - {reserva.horaInicio} às {reserva.horaFim}
-                            </strong>
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Voltar</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleCancelarReserva(reserva.id)}
-                            className="bg-destructive hover:bg-destructive/90"
-                          >
-                            Confirmar Cancelamento
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  )}
                 </div>
               </CardContent>
             </Card>
