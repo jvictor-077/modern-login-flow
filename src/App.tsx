@@ -18,6 +18,7 @@ import NotFound from "./pages/NotFound";
 import { AlunoLayout } from "./components/aluno/AlunoLayout";
 import AlunoHomeContent from "./pages/aluno/AlunoHomeContent";
 import ReservarHorario from "./pages/aluno/ReservarHorario";
+import MinhasReservas from "./pages/aluno/MinhasReservas";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ const App = () => (
           {/* Aluno routes with sidebar layout */}
           <Route path="/aluno" element={<AlunoLayout><AlunoHomeContent /></AlunoLayout>} />
           <Route path="/aluno/reservar" element={<AlunoLayout><ReservarHorario /></AlunoLayout>} />
+          <Route path="/aluno/reservas" element={<AlunoLayout><MinhasReservas /></AlunoLayout>} />
           
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/estoque" element={<Estoque />} />
