@@ -444,14 +444,14 @@ export default function Mensalidades() {
                         <div key={modalidade} className="border border-border/50 rounded-lg p-3 space-y-2">
                           <p className="font-medium text-sm">{modalidade}</p>
                           <Select
-                            value={novoAluno.modalidades[modalidade] || ""}
-                            onValueChange={(value) => handleModalidadeChange(modalidade, value)}
+                            value={novoAluno.modalidades[modalidade] || "none"}
+                            onValueChange={(value) => handleModalidadeChange(modalidade, value === "none" ? "" : value)}
                           >
                             <SelectTrigger className="w-full">
                               <SelectValue placeholder="Selecione um plano" />
                             </SelectTrigger>
                             <SelectContent className="bg-popover">
-                              <SelectItem value="">Nenhum</SelectItem>
+                              <SelectItem value="none">Nenhum</SelectItem>
                               {planosDisponiveis.map((plano) => (
                                 <SelectItem key={plano} value={plano}>
                                   {plano}
