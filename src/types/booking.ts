@@ -39,6 +39,17 @@ export interface RecurringClass {
   end_time: string; // "08:00"
   is_active: boolean;
   created_at: Date;
+  // Alunos matriculados nesta aula
+  enrolled_students?: string[]; // user_ids
+}
+
+// Representa o vínculo aluno ↔ aula (para cronograma do aluno)
+export interface StudentEnrollment {
+  id: string;
+  student_id: string;
+  recurring_class_id: string;
+  enrolled_at: Date;
+  is_active: boolean;
 }
 
 // Reserva avulsa (aluno ou admin)

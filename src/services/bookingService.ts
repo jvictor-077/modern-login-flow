@@ -94,6 +94,13 @@ export function getRecurringClasses(): RecurringClass[] {
   return localRecurringClasses.filter(rc => rc.is_active);
 }
 
+// Busca aulas do aluno pelo user_id
+export function getRecurringClassesForStudent(userId: string): RecurringClass[] {
+  return localRecurringClasses.filter(
+    rc => rc.is_active && rc.enrolled_students?.includes(userId)
+  );
+}
+
 export function addRecurringClass(classData: Omit<RecurringClass, "id" | "created_at">): RecurringClass {
   const newClass: RecurringClass = {
     ...classData,
@@ -108,6 +115,32 @@ export function deleteRecurringClass(classId: string): boolean {
   const index = localRecurringClasses.findIndex(rc => rc.id === classId);
   if (index !== -1) {
     localRecurringClasses[index].is_active = false;
+    return true;
+  }
+  return false;
+}
+
+// Matricular aluno em uma aula
+export function enrollStudent(classId: string, userId: string): boolean {
+  const index = localRecurringClasses.findIndex(rc => rc.id === classId);
+  if (index !== -1) {
+    if (!localRecurringClasses[index].enrolled_students) {
+      localRecurringClasses[index].enrolled_students = [];
+    }
+    if (!localRecurringClasses[index].enrolled_students!.includes(userId)) {
+      localRecurringClasses[index].enrolled_students!.push(userId);
+    }
+    return true;
+  }
+  return false;
+}
+
+// Remover matrícula do aluno
+export function unenrollStudent(classId: string, userId: string): boolean {
+  const index = localRecurringClasses.findIndex(rc => rc.id === classId);
+  if (index !== -1 && localRecurringClasses[index].enrolled_students) {
+    localRecurringClasses[index].enrolled_students = 
+      localRecurringClasses[index].enrolled_students!.filter(id => id !== userId);
     return true;
   }
   return false;

@@ -10,33 +10,69 @@ import {
   Moon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { alunoLogado, cronogramaAulas } from "@/data/alunosData";
+import { alunoLogado } from "@/data/alunosData";
 import { DIAS_SEMANA } from "@/types/aluno";
+import { getRecurringClassesForStudent, getCourtById } from "@/services/bookingService";
+import { DAYS_OF_WEEK } from "@/data/mockData";
 
 const diasSemana = DIAS_SEMANA.map(d => d.label);
 const diasSemanaFull = DIAS_SEMANA.map(d => d.full);
+
+// Converte número do dia para nome completo
+const getDayName = (dayNumber: number): string => {
+  return diasSemanaFull[dayNumber] || "";
+};
+
+// Determina período com base no horário
+const getPeriodo = (startTime: string): "manhã" | "tarde" | "noite" => {
+  const hour = parseInt(startTime.split(":")[0]);
+  if (hour < 12) return "manhã";
+  if (hour < 18) return "tarde";
+  return "noite";
+};
 
 const AlunoHomeContent = () => {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   
   const hoje = new Date();
-  const diaSemanaHoje = hoje.toLocaleDateString('pt-BR', { weekday: 'long' });
+  const diaSemanaHoje = hoje.getDay(); // 0 = domingo, 6 = sábado
+  const diaSemanaHojeNome = hoje.toLocaleDateString('pt-BR', { weekday: 'long' });
   const dataFormatada = hoje.toLocaleDateString('pt-BR', { 
     weekday: 'long', 
     day: 'numeric', 
     month: 'long' 
   });
 
-  // Filtra aulas do aluno logado
-  const cronogramaAluno = cronogramaAulas.filter(aula => aula.aluno_id === alunoLogado.id);
+  // Busca aulas recorrentes do aluno logado via serviço centralizado
+  const userId = "user-1"; // TODO: pegar do contexto de auth
+  const aulasRecorrentes = getRecurringClassesForStudent(userId);
 
-  const aulasHoje = cronogramaAluno.filter(aula => 
-    aula.dia_semana.toLowerCase() === diaSemanaHoje.toLowerCase()
+  // Transforma aulas recorrentes em cronograma expandido por dia
+  const cronogramaAluno = aulasRecorrentes.flatMap(aula => 
+    aula.days_of_week.map(dia => ({
+      id: `${aula.id}-${dia}`,
+      recurring_class_id: aula.id,
+      modalidade: aula.class_type,
+      dia_semana: getDayName(dia),
+      dia_numero: dia,
+      horario: `${aula.start_time} - ${aula.end_time}`,
+      local: getCourtById(aula.court_id)?.name || "Quadra",
+      professor: aula.instructor_name?.replace("Prof. ", "") || "",
+      periodo: getPeriodo(aula.start_time),
+    }))
   );
+
+  const aulasHoje = cronogramaAluno.filter(aula => aula.dia_numero === diaSemanaHoje);
 
   const aulasFiltradas = selectedDay 
     ? cronogramaAluno.filter(aula => aula.dia_semana.toLowerCase().includes(selectedDay.toLowerCase()))
     : cronogramaAluno;
+
+  // Modalidades únicas do aluno
+  const modalidadesAluno = [...new Set(aulasRecorrentes.map(a => a.class_type))].map(nome => ({
+    id: nome.toLowerCase().replace(/ /g, "_"),
+    nome
+  }));
 
   const getModalidadeColor = (modalidade: string) => {
     const colors: Record<string, string> = {
@@ -116,7 +152,7 @@ const AlunoHomeContent = () => {
       <div>
         <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Minhas Modalidades</h2>
         <div className="flex flex-wrap gap-2">
-          {alunoLogado.modalidades.map((mod) => (
+          {modalidadesAluno.map((mod) => (
             <Badge 
               key={mod.id}
               variant="outline"
