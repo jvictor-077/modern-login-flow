@@ -2,6 +2,7 @@ import { useState } from "react";
 import { format, addDays, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -250,54 +251,58 @@ const ReservarHorario = () => {
                   </div>
                 </div>
 
-                {/* Lista de horários */}
-                <div className="space-y-2 sm:space-y-3">
+                {/* Lista de horários com scroll */}
+                <div className="space-y-2">
                   <p className="text-xs sm:text-sm font-medium text-muted-foreground">Horários:</p>
-                  {getSlotsDisponiveis().map((slot) => (
-                    <button
-                      key={slot.id}
-                      onClick={() => setSelectedSlot(slot)}
-                      className={`
-                        w-full p-3 sm:p-4 rounded-xl border transition-all text-left
-                        ${selectedSlot?.id === slot.id 
-                          ? "border-primary bg-primary/10" 
-                          : "border-border hover:border-primary/50"
-                        }
-                        cursor-pointer
-                      `}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 sm:gap-3">
-                          <div className={`
-                            w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center
-                            ${selectedSlot?.id === slot.id ? "bg-primary text-primary-foreground" : "bg-muted"}
-                          `}>
-                            {selectedSlot?.id === slot.id ? (
-                              <Check className="h-4 w-4 sm:h-5 sm:w-5" />
-                            ) : (
-                              <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
-                            )}
+                  <ScrollArea className="h-[200px] sm:h-[250px] pr-3">
+                    <div className="space-y-2 sm:space-y-3">
+                      {getSlotsDisponiveis().map((slot) => (
+                        <button
+                          key={slot.id}
+                          onClick={() => setSelectedSlot(slot)}
+                          className={`
+                            w-full p-3 sm:p-4 rounded-xl border transition-all text-left
+                            ${selectedSlot?.id === slot.id 
+                              ? "border-primary bg-primary/10" 
+                              : "border-border hover:border-primary/50"
+                            }
+                            cursor-pointer
+                          `}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 sm:gap-3">
+                              <div className={`
+                                w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center
+                                ${selectedSlot?.id === slot.id ? "bg-primary text-primary-foreground" : "bg-muted"}
+                              `}>
+                                {selectedSlot?.id === slot.id ? (
+                                  <Check className="h-4 w-4 sm:h-5 sm:w-5" />
+                                ) : (
+                                  <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
+                                )}
+                              </div>
+                              <div>
+                                <p className="font-medium text-sm sm:text-base">
+                                  {slot.start_time} - {calculateEndTime(slot.start_time, duracao)}
+                                </p>
+                                <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1">
+                                  <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                                  {slot.court_name}
+                                </p>
+                              </div>
+                            </div>
+                            <Badge variant="outline" className="bg-accent/20 text-accent border-accent/30 text-[10px] sm:text-xs">
+                              Livre
+                            </Badge>
                           </div>
-                          <div>
-                            <p className="font-medium text-sm sm:text-base">
-                              {slot.start_time} - {calculateEndTime(slot.start_time, duracao)}
-                            </p>
-                            <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1">
-                              <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                              {slot.court_name}
-                            </p>
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="bg-accent/20 text-accent border-accent/30 text-[10px] sm:text-xs">
-                          Livre
-                        </Badge>
-                      </div>
-                    </button>
-                  ))}
+                        </button>
+                      ))}
+                    </div>
+                  </ScrollArea>
                 </div>
 
                 {selectedSlot && (
-                  <div className="pt-3 sm:pt-4 border-t border-border">
+                  <div className="sticky bottom-0 pt-3 sm:pt-4 border-t border-border bg-card">
                     <div className="flex items-center justify-between mb-3 sm:mb-4 p-2 sm:p-3 rounded-lg bg-primary/10">
                       <span className="font-medium text-sm sm:text-base">Total:</span>
                       <span className="text-xl sm:text-2xl font-bold text-primary">R$ {getPreco()},00</span>
