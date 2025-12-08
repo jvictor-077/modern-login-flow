@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -27,112 +28,179 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus, Search, UserPlus } from "lucide-react";
 import { toast } from "sonner";
+
+interface Modalidade {
+  nome: string;
+  plano: string;
+}
 
 interface Aluno {
   id: string;
   nome: string;
-  telefone: string;
-  aulas: string[];
+  email: string;
+  cpf: string;
+  dataNascimento: string;
+  celular: string;
+  endereco: string;
+  contatoEmergencia: string;
+  tipoSanguineo: string;
+  doencas: string;
+  alergias: string;
+  modalidades: Modalidade[];
+  observacoes: string;
+  autorizaImagem: boolean;
   situacao: "em_dia" | "pendente" | "atrasado";
   valorMensalidade: number;
 }
 
-const aulasDisponiveis = [
+const modalidadesDisponiveis = [
   "Beach Tennis",
-  "Tênis",
-  "Vôlei",
+  "Vôlei Adulto Noite",
+  "Vôlei Adulto Manhã",
+  "Vôlei Teen",
   "Futevôlei",
-  "Funcional",
 ];
+
+const planosDisponiveis = [
+  "Trimestral",
+  "Mensal 3x na semana",
+  "Mensal 2x na semana",
+  "Mensal 1x na semana",
+  "Aula Avulsa",
+];
+
+const tiposSanguineos = ["A+", "A-", "AB+", "AB-", "B+", "B-", "O+", "O-"];
 
 const initialAlunos: Aluno[] = [
   {
     id: "1",
     nome: "João Silva",
-    telefone: "(11) 99999-1111",
-    aulas: ["Beach Tennis"],
+    email: "joao@email.com",
+    cpf: "12345678900",
+    dataNascimento: "1990-05-15",
+    celular: "(11) 99999-1111",
+    endereco: "Rua das Flores, 123, Centro, São Paulo - SP, 01234-567",
+    contatoEmergencia: "Maria Silva - (11) 98888-1111",
+    tipoSanguineo: "O+",
+    doencas: "",
+    alergias: "",
+    modalidades: [{ nome: "Beach Tennis", plano: "Mensal 3x na semana" }],
+    observacoes: "",
+    autorizaImagem: true,
     situacao: "em_dia",
     valorMensalidade: 150,
   },
   {
     id: "2",
     nome: "Maria Santos",
-    telefone: "(11) 99999-2222",
-    aulas: ["Tênis", "Funcional"],
+    email: "maria@email.com",
+    cpf: "98765432100",
+    dataNascimento: "1985-03-20",
+    celular: "(11) 99999-2222",
+    endereco: "Av. Brasil, 456, Jardins, São Paulo - SP, 04567-890",
+    contatoEmergencia: "Pedro Santos - (11) 98888-2222",
+    tipoSanguineo: "A+",
+    doencas: "",
+    alergias: "",
+    modalidades: [
+      { nome: "Vôlei Adulto Noite", plano: "Mensal 2x na semana" },
+      { nome: "Beach Tennis", plano: "Trimestral" },
+    ],
+    observacoes: "",
+    autorizaImagem: true,
     situacao: "pendente",
     valorMensalidade: 250,
   },
-  {
-    id: "3",
-    nome: "Pedro Oliveira",
-    telefone: "(11) 99999-3333",
-    aulas: ["Vôlei"],
-    situacao: "atrasado",
-    valorMensalidade: 120,
-  },
-  {
-    id: "4",
-    nome: "Ana Costa",
-    telefone: "(11) 99999-4444",
-    aulas: ["Beach Tennis", "Tênis"],
-    situacao: "em_dia",
-    valorMensalidade: 280,
-  },
-  {
-    id: "5",
-    nome: "Carlos Lima",
-    telefone: "(11) 99999-5555",
-    aulas: ["Futevôlei"],
-    situacao: "em_dia",
-    valorMensalidade: 130,
-  },
 ];
+
+const emptyNovoAluno = {
+  nome: "",
+  email: "",
+  cpf: "",
+  dataNascimento: "",
+  celular: "",
+  endereco: "",
+  contatoEmergencia: "",
+  tipoSanguineo: "",
+  doencas: "",
+  alergias: "",
+  modalidades: {} as Record<string, string>,
+  observacoes: "",
+  autorizaImagem: true,
+  valorMensalidade: "",
+};
 
 export default function Mensalidades() {
   const [alunos, setAlunos] = useState<Aluno[]>(initialAlunos);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [novoAluno, setNovoAluno] = useState({
-    nome: "",
-    telefone: "",
-    aulas: [] as string[],
-    valorMensalidade: "",
-  });
+  const [novoAluno, setNovoAluno] = useState(emptyNovoAluno);
 
   const filteredAlunos = alunos.filter((aluno) =>
     aluno.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleModalidadeChange = (modalidade: string, plano: string) => {
+    setNovoAluno((prev) => {
+      const newModalidades = { ...prev.modalidades };
+      if (plano) {
+        newModalidades[modalidade] = plano;
+      } else {
+        delete newModalidades[modalidade];
+      }
+      return { ...prev, modalidades: newModalidades };
+    });
+  };
+
   const handleAddAluno = () => {
-    if (!novoAluno.nome || !novoAluno.telefone || novoAluno.aulas.length === 0) {
+    if (
+      !novoAluno.nome ||
+      !novoAluno.email ||
+      !novoAluno.cpf ||
+      !novoAluno.dataNascimento ||
+      !novoAluno.celular ||
+      !novoAluno.contatoEmergencia ||
+      !novoAluno.tipoSanguineo
+    ) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
 
+    if (Object.keys(novoAluno.modalidades).length === 0) {
+      toast.error("Selecione pelo menos uma modalidade");
+      return;
+    }
+
+    const modalidadesArray: Modalidade[] = Object.entries(novoAluno.modalidades).map(
+      ([nome, plano]) => ({ nome, plano })
+    );
+
     const newAluno: Aluno = {
       id: Date.now().toString(),
       nome: novoAluno.nome,
-      telefone: novoAluno.telefone,
-      aulas: novoAluno.aulas,
+      email: novoAluno.email,
+      cpf: novoAluno.cpf,
+      dataNascimento: novoAluno.dataNascimento,
+      celular: novoAluno.celular,
+      endereco: novoAluno.endereco,
+      contatoEmergencia: novoAluno.contatoEmergencia,
+      tipoSanguineo: novoAluno.tipoSanguineo,
+      doencas: novoAluno.doencas,
+      alergias: novoAluno.alergias,
+      modalidades: modalidadesArray,
+      observacoes: novoAluno.observacoes,
+      autorizaImagem: novoAluno.autorizaImagem,
       situacao: "pendente",
       valorMensalidade: parseFloat(novoAluno.valorMensalidade) || 0,
     };
 
     setAlunos([...alunos, newAluno]);
-    setNovoAluno({ nome: "", telefone: "", aulas: [], valorMensalidade: "" });
+    setNovoAluno(emptyNovoAluno);
     setIsDialogOpen(false);
     toast.success("Aluno cadastrado com sucesso!");
-  };
-
-  const toggleAula = (aula: string) => {
-    setNovoAluno((prev) => ({
-      ...prev,
-      aulas: prev.aulas.includes(aula)
-        ? prev.aulas.filter((a) => a !== aula)
-        : [...prev.aulas, aula],
-    }));
   };
 
   const getSituacaoBadge = (situacao: Aluno["situacao"]) => {
@@ -173,74 +241,264 @@ export default function Mensalidades() {
                 Novo Aluno
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-2xl max-h-[90vh]">
               <DialogHeader>
                 <DialogTitle>Cadastrar Novo Aluno</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="nome">Nome Completo</Label>
-                  <Input
-                    id="nome"
-                    value={novoAluno.nome}
-                    onChange={(e) =>
-                      setNovoAluno({ ...novoAluno, nome: e.target.value })
-                    }
-                    placeholder="Nome do aluno"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="telefone">Telefone</Label>
-                  <Input
-                    id="telefone"
-                    value={novoAluno.telefone}
-                    onChange={(e) =>
-                      setNovoAluno({ ...novoAluno, telefone: e.target.value })
-                    }
-                    placeholder="(00) 00000-0000"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Aulas Matriculadas</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {aulasDisponiveis.map((aula) => (
-                      <div key={aula} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={aula}
-                          checked={novoAluno.aulas.includes(aula)}
-                          onCheckedChange={() => toggleAula(aula)}
+              <ScrollArea className="max-h-[70vh] pr-4">
+                <div className="space-y-6 pt-4">
+                  {/* Dados Pessoais */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                      Dados Pessoais
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="nome">Nome Completo *</Label>
+                        <Input
+                          id="nome"
+                          value={novoAluno.nome}
+                          onChange={(e) =>
+                            setNovoAluno({ ...novoAluno, nome: e.target.value })
+                          }
+                          placeholder="Nome completo"
                         />
-                        <label
-                          htmlFor={aula}
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                        >
-                          {aula}
-                        </label>
                       </div>
-                    ))}
+                      <div className="space-y-2">
+                        <Label htmlFor="email">E-mail *</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={novoAluno.email}
+                          onChange={(e) =>
+                            setNovoAluno({ ...novoAluno, email: e.target.value })
+                          }
+                          placeholder="email@exemplo.com"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="cpf">CPF (apenas números) *</Label>
+                        <Input
+                          id="cpf"
+                          value={novoAluno.cpf}
+                          onChange={(e) =>
+                            setNovoAluno({ ...novoAluno, cpf: e.target.value.replace(/\D/g, '') })
+                          }
+                          placeholder="00000000000"
+                          maxLength={11}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="dataNascimento">Data de Nascimento *</Label>
+                        <Input
+                          id="dataNascimento"
+                          type="date"
+                          value={novoAluno.dataNascimento}
+                          onChange={(e) =>
+                            setNovoAluno({ ...novoAluno, dataNascimento: e.target.value })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="celular">Celular (WhatsApp) *</Label>
+                        <Input
+                          id="celular"
+                          value={novoAluno.celular}
+                          onChange={(e) =>
+                            setNovoAluno({ ...novoAluno, celular: e.target.value })
+                          }
+                          placeholder="(00) 00000-0000"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="tipoSanguineo">Tipo Sanguíneo *</Label>
+                        <Select
+                          value={novoAluno.tipoSanguineo}
+                          onValueChange={(value) =>
+                            setNovoAluno({ ...novoAluno, tipoSanguineo: value })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover">
+                            {tiposSanguineos.map((tipo) => (
+                              <SelectItem key={tipo} value={tipo}>
+                                {tipo}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="endereco">
+                        Endereço Residencial (rua, número, complemento, bairro, cidade e CEP)
+                      </Label>
+                      <Textarea
+                        id="endereco"
+                        value={novoAluno.endereco}
+                        onChange={(e) =>
+                          setNovoAluno({ ...novoAluno, endereco: e.target.value })
+                        }
+                        placeholder="Rua, número, complemento, bairro, cidade - UF, CEP"
+                        rows={2}
+                      />
+                    </div>
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="valor">Valor da Mensalidade (R$)</Label>
-                  <Input
-                    id="valor"
-                    type="number"
-                    value={novoAluno.valorMensalidade}
-                    onChange={(e) =>
-                      setNovoAluno({ ...novoAluno, valorMensalidade: e.target.value })
-                    }
-                    placeholder="150.00"
-                  />
-                </div>
+                  {/* Contato de Emergência */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                      Contato de Emergência
+                    </h3>
+                    <div className="space-y-2">
+                      <Label htmlFor="contatoEmergencia">
+                        Pessoa de contato para emergência (Nome + celular com DDD) *
+                      </Label>
+                      <Input
+                        id="contatoEmergencia"
+                        value={novoAluno.contatoEmergencia}
+                        onChange={(e) =>
+                          setNovoAluno({ ...novoAluno, contatoEmergencia: e.target.value })
+                        }
+                        placeholder="Nome - (00) 00000-0000"
+                      />
+                    </div>
+                  </div>
 
-                <Button onClick={handleAddAluno} className="w-full gap-2">
-                  <Plus className="h-4 w-4" />
-                  Cadastrar Aluno
-                </Button>
-              </div>
+                  {/* Informações de Saúde */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                      Informações de Saúde
+                    </h3>
+                    <div className="space-y-2">
+                      <Label htmlFor="doencas">
+                        Informar, se houver, doenças ou lesões pré-existentes
+                      </Label>
+                      <Textarea
+                        id="doencas"
+                        value={novoAluno.doencas}
+                        onChange={(e) =>
+                          setNovoAluno({ ...novoAluno, doencas: e.target.value })
+                        }
+                        placeholder="Descreva se houver..."
+                        rows={2}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="alergias">Alergias? (preencher se tiver)</Label>
+                      <Input
+                        id="alergias"
+                        value={novoAluno.alergias}
+                        onChange={(e) =>
+                          setNovoAluno({ ...novoAluno, alergias: e.target.value })
+                        }
+                        placeholder="Descreva se houver..."
+                      />
+                    </div>
+                  </div>
+
+                  {/* Modalidades */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                      Qual modalidade deseja treinar? *
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      Obs: você pode selecionar mais de 1 modalidade.
+                    </p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm border border-border/50 rounded-lg">
+                        <thead>
+                          <tr className="border-b border-border/50 bg-muted/30">
+                            <th className="text-left p-2 font-medium">Modalidade</th>
+                            {planosDisponiveis.map((plano) => (
+                              <th key={plano} className="text-center p-2 font-medium text-xs">
+                                {plano}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {modalidadesDisponiveis.map((modalidade) => (
+                            <tr key={modalidade} className="border-b border-border/30">
+                              <td className="p-2 font-medium">{modalidade}</td>
+                              {planosDisponiveis.map((plano) => (
+                                <td key={plano} className="text-center p-2">
+                                  <Checkbox
+                                    checked={novoAluno.modalidades[modalidade] === plano}
+                                    onCheckedChange={(checked) =>
+                                      handleModalidadeChange(
+                                        modalidade,
+                                        checked ? plano : ""
+                                      )
+                                    }
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Valor e Observações */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="valorMensalidade">Valor da Mensalidade (R$)</Label>
+                      <Input
+                        id="valorMensalidade"
+                        type="number"
+                        value={novoAluno.valorMensalidade}
+                        onChange={(e) =>
+                          setNovoAluno({ ...novoAluno, valorMensalidade: e.target.value })
+                        }
+                        placeholder="150.00"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="observacoes">
+                        Há alguma observação que deseje fazer?
+                      </Label>
+                      <Textarea
+                        id="observacoes"
+                        value={novoAluno.observacoes}
+                        onChange={(e) =>
+                          setNovoAluno({ ...novoAluno, observacoes: e.target.value })
+                        }
+                        placeholder="Observações adicionais..."
+                        rows={2}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Autorização de Imagem */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                      Autorização de Imagem *
+                    </h3>
+                    <div className="flex items-start space-x-3">
+                      <Checkbox
+                        id="autorizaImagem"
+                        checked={novoAluno.autorizaImagem}
+                        onCheckedChange={(checked) =>
+                          setNovoAluno({ ...novoAluno, autorizaImagem: !!checked })
+                        }
+                      />
+                      <label htmlFor="autorizaImagem" className="text-sm leading-relaxed">
+                        Autorizo a utilizar minha imagem para a finalidade de postar fotos e
+                        vídeos no Instagram como divulgação.
+                      </label>
+                    </div>
+                  </div>
+
+                  <Button onClick={handleAddAluno} className="w-full gap-2">
+                    <Plus className="h-4 w-4" />
+                    Cadastrar Aluno
+                  </Button>
+                </div>
+              </ScrollArea>
             </DialogContent>
           </Dialog>
         </div>
@@ -251,8 +509,8 @@ export default function Mensalidades() {
             <TableHeader>
               <TableRow className="hover:bg-transparent border-border/50">
                 <TableHead className="text-muted-foreground">Nome</TableHead>
-                <TableHead className="text-muted-foreground">Telefone</TableHead>
-                <TableHead className="text-muted-foreground">Aulas</TableHead>
+                <TableHead className="text-muted-foreground">Celular</TableHead>
+                <TableHead className="text-muted-foreground">Modalidades</TableHead>
                 <TableHead className="text-muted-foreground">Valor</TableHead>
                 <TableHead className="text-muted-foreground">Situação</TableHead>
                 <TableHead className="text-muted-foreground text-right">Ações</TableHead>
@@ -262,12 +520,12 @@ export default function Mensalidades() {
               {filteredAlunos.map((aluno) => (
                 <TableRow key={aluno.id} className="border-border/50">
                   <TableCell className="font-medium">{aluno.nome}</TableCell>
-                  <TableCell className="text-muted-foreground">{aluno.telefone}</TableCell>
+                  <TableCell className="text-muted-foreground">{aluno.celular}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {aluno.aulas.map((aula) => (
-                        <Badge key={aula} variant="outline" className="text-xs">
-                          {aula}
+                      {aluno.modalidades.map((mod) => (
+                        <Badge key={mod.nome} variant="outline" className="text-xs">
+                          {mod.nome}
                         </Badge>
                       ))}
                     </div>
@@ -286,7 +544,7 @@ export default function Mensalidades() {
                       <SelectTrigger className="w-[130px] h-8 text-xs">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-popover">
                         <SelectItem value="em_dia">Em dia</SelectItem>
                         <SelectItem value="pendente">Pendente</SelectItem>
                         <SelectItem value="atrasado">Atrasado</SelectItem>
