@@ -24,11 +24,14 @@ export const precosModalidades: ModalidadePrecos[] = [
     modalidade: "Funcional",
     planos: [
       { nome: "Mensal", valor: 180.00 },
+      { nome: "Trimestral", valor: 160.00 },
+      { nome: "1x por semana", valor: 110.00 },
     ],
   },
   {
     modalidade: "Vôlei Adulto Noite",
     planos: [
+      { nome: "Mensal", valor: 180.00 },
       { nome: "Trimestral", valor: 160.00 },
       { nome: "1x por semana", valor: 110.00 },
     ],
@@ -36,6 +39,7 @@ export const precosModalidades: ModalidadePrecos[] = [
   {
     modalidade: "Vôlei Teen",
     planos: [
+      { nome: "Mensal", valor: 180.00 },
       { nome: "Trimestral", valor: 160.00 },
       { nome: "1x por semana", valor: 110.00 },
     ],
