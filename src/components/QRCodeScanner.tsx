@@ -71,6 +71,23 @@ export function QRCodeScanner({ open, onClose, onProductsScanned }: QRCodeScanne
     return products;
   };
 
+  // Validates that a URL is from an official Brazilian SEFAZ domain
+  const isValidSefazUrl = (url: string): boolean => {
+    try {
+      const parsedUrl = new URL(url);
+      // Must be HTTPS
+      if (parsedUrl.protocol !== 'https:') {
+        return false;
+      }
+      // Must be a valid Brazilian government SEFAZ/Fazenda domain
+      const hostname = parsedUrl.hostname.toLowerCase();
+      const validDomainPattern = /^[\w.-]+\.(fazenda|sefaz)[\w.-]*\.gov\.br$/;
+      return validDomainPattern.test(hostname);
+    } catch {
+      return false;
+    }
+  };
+
   const handleQRCodeResult = useCallback(async (url: string) => {
     // Prevent duplicate processing
     if (isProcessingRef.current || hasScannedRef.current) {
@@ -83,11 +100,11 @@ export function QRCodeScanner({ open, onClose, onProductsScanned }: QRCodeScanne
     // Stop scanner immediately
     await stopScanner();
     
-    // Validate URL
-    if (!url.includes("nfce") && !url.includes("nfe") && !url.includes("sefaz")) {
+    // Validate URL - must be from official SEFAZ domain
+    if (!isValidSefazUrl(url)) {
       toast({
         title: "QR Code inválido",
-        description: "Este QR Code não parece ser de uma nota fiscal.",
+        description: "Este QR Code não é de uma nota fiscal válida. Apenas notas fiscais de domínios oficiais (sefaz.gov.br) são aceitas.",
         variant: "destructive",
       });
       isProcessingRef.current = false;
