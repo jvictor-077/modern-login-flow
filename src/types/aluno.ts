@@ -41,12 +41,13 @@ export interface AulaCronograma {
   periodo: "manhã" | "tarde" | "noite";
 }
 
-// Planos disponíveis
+// Planos disponíveis (genéricos - planos específicos por modalidade em precosData.ts)
 export const PLANOS_DISPONIVEIS = [
+  "Mensal",
   "Trimestral",
-  "Mensal 3x na semana",
-  "Mensal 2x na semana",
-  "Mensal 1x na semana",
+  "1x por semana",
+  "2x por semana",
+  "3x por semana",
   "Aula Avulsa",
 ] as const;
 
@@ -59,6 +60,7 @@ export const MODALIDADES_DISPONIVEIS = [
   "Vôlei Adulto Manhã",
   "Vôlei Teen",
   "Futevôlei",
+  "Funcional",
 ] as const;
 
 export type ModalidadeType = typeof MODALIDADES_DISPONIVEIS[number];

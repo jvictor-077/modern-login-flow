@@ -32,6 +32,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus, Search, UserPlus, Phone, User, CreditCard, MapPin, Heart, Calendar, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
+import { TIPOS_SANGUINEOS } from "@/types/aluno";
+import { precosModalidades, getPlanosModalidade, formatarPreco, matricula } from "@/data/precosData";
 
 interface Modalidade {
   nome: string;
@@ -56,23 +58,10 @@ interface Aluno {
   situacao: "em_dia" | "pendente" | "atrasado";
 }
 
-const modalidadesDisponiveis = [
-  "Beach Tennis",
-  "Vôlei Adulto Noite",
-  "Vôlei Adulto Manhã",
-  "Vôlei Teen",
-  "Futevôlei",
-];
+// Lista de modalidades disponíveis (extraída de precosData)
+const modalidadesDisponiveis = precosModalidades.map((m) => m.modalidade);
 
-const planosDisponiveis = [
-  "Trimestral",
-  "Mensal 3x na semana",
-  "Mensal 2x na semana",
-  "Mensal 1x na semana",
-  "Aula Avulsa",
-];
-
-const tiposSanguineos = ["A+", "A-", "AB+", "AB-", "B+", "B-", "O+", "O-"];
+const tiposSanguineos = [...TIPOS_SANGUINEOS];
 
 const initialAlunos: Aluno[] = [
   {
@@ -87,7 +76,7 @@ const initialAlunos: Aluno[] = [
     tipoSanguineo: "O+",
     doencas: "",
     alergias: "",
-    modalidades: [{ nome: "Beach Tennis", plano: "Mensal 3x na semana" }],
+    modalidades: [{ nome: "Beach Tennis", plano: "Mensal" }],
     observacoes: "",
     autorizaImagem: true,
     situacao: "em_dia",
@@ -105,7 +94,7 @@ const initialAlunos: Aluno[] = [
     doencas: "",
     alergias: "",
     modalidades: [
-      { nome: "Vôlei Adulto Noite", plano: "Mensal 2x na semana" },
+      { nome: "Vôlei Adulto Noite", plano: "1x por semana" },
       { nome: "Beach Tennis", plano: "Trimestral" },
     ],
     observacoes: "",
@@ -410,65 +399,90 @@ export default function Mensalidades() {
                     <p className="text-xs text-muted-foreground">
                       Obs: você pode selecionar mais de 1 modalidade.
                     </p>
-                    {/* Desktop: Table layout */}
-                    <div className="hidden sm:block overflow-x-auto">
-                      <table className="w-full text-sm border border-border/50 rounded-lg">
-                        <thead>
-                          <tr className="border-b border-border/50 bg-muted/30">
-                            <th className="text-left p-2 font-medium">Modalidade</th>
-                            {planosDisponiveis.map((plano) => (
-                              <th key={plano} className="text-center p-2 font-medium text-xs">
-                                {plano}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {modalidadesDisponiveis.map((modalidade) => (
-                            <tr key={modalidade} className="border-b border-border/30">
-                              <td className="p-2 font-medium">{modalidade}</td>
-                              {planosDisponiveis.map((plano) => (
-                                <td key={plano} className="text-center p-2">
+                  {/* Desktop: Card layout por modalidade */}
+                    <div className="hidden sm:block space-y-4">
+                      {modalidadesDisponiveis.map((modalidade) => {
+                        const planos = getPlanosModalidade(modalidade);
+                        return (
+                          <div key={modalidade} className="border border-border/50 rounded-lg p-4">
+                            <p className="font-medium mb-3">{modalidade}</p>
+                            <div className="flex flex-wrap gap-3">
+                              {planos.map((plano) => (
+                                <label
+                                  key={plano.nome}
+                                  className={`flex items-center gap-2 p-2 px-3 rounded-lg border cursor-pointer transition-colors ${
+                                    novoAluno.modalidades[modalidade] === plano.nome
+                                      ? "border-primary bg-primary/10"
+                                      : "border-border/50 hover:border-border"
+                                  }`}
+                                >
                                   <Checkbox
-                                    checked={novoAluno.modalidades[modalidade] === plano}
+                                    checked={novoAluno.modalidades[modalidade] === plano.nome}
                                     onCheckedChange={(checked) =>
-                                      handleModalidadeChange(
-                                        modalidade,
-                                        checked ? plano : ""
-                                      )
+                                      handleModalidadeChange(modalidade, checked ? plano.nome : "")
                                     }
                                   />
-                                </td>
+                                  <span className="text-sm">
+                                    {plano.nome} - {formatarPreco(plano.valor)}
+                                  </span>
+                                </label>
                               ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                              <label
+                                className={`flex items-center gap-2 p-2 px-3 rounded-lg border cursor-pointer transition-colors ${
+                                  novoAluno.modalidades[modalidade] === "Aula Avulsa"
+                                    ? "border-primary bg-primary/10"
+                                    : "border-border/50 hover:border-border"
+                                }`}
+                              >
+                                <Checkbox
+                                  checked={novoAluno.modalidades[modalidade] === "Aula Avulsa"}
+                                  onCheckedChange={(checked) =>
+                                    handleModalidadeChange(modalidade, checked ? "Aula Avulsa" : "")
+                                  }
+                                />
+                                <span className="text-sm">Aula Avulsa</span>
+                              </label>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                     
                     {/* Mobile: Card layout */}
                     <div className="sm:hidden space-y-4">
-                      {modalidadesDisponiveis.map((modalidade) => (
-                        <div key={modalidade} className="border border-border/50 rounded-lg p-3 space-y-2">
-                          <p className="font-medium text-sm">{modalidade}</p>
-                          <Select
-                            value={novoAluno.modalidades[modalidade] || "none"}
-                            onValueChange={(value) => handleModalidadeChange(modalidade, value === "none" ? "" : value)}
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Selecione um plano" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-popover">
-                              <SelectItem value="none">Nenhum</SelectItem>
-                              {planosDisponiveis.map((plano) => (
-                                <SelectItem key={plano} value={plano}>
-                                  {plano}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      ))}
+                      {modalidadesDisponiveis.map((modalidade) => {
+                        const planos = getPlanosModalidade(modalidade);
+                        return (
+                          <div key={modalidade} className="border border-border/50 rounded-lg p-3 space-y-2">
+                            <p className="font-medium text-sm">{modalidade}</p>
+                            <Select
+                              value={novoAluno.modalidades[modalidade] || "none"}
+                              onValueChange={(value) => handleModalidadeChange(modalidade, value === "none" ? "" : value)}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Selecione um plano" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-popover">
+                                <SelectItem value="none">Nenhum</SelectItem>
+                                {planos.map((plano) => (
+                                  <SelectItem key={plano.nome} value={plano.nome}>
+                                    {plano.nome} - {formatarPreco(plano.valor)}
+                                  </SelectItem>
+                                ))}
+                                <SelectItem value="Aula Avulsa">Aula Avulsa</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Info Matrícula */}
+                    <div className="p-3 rounded-lg bg-primary/10 border border-primary/30">
+                      <p className="text-sm font-medium">
+                        Taxa de Matrícula: {formatarPreco(matricula.valor)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{matricula.descricao}</p>
                     </div>
                   </div>
 

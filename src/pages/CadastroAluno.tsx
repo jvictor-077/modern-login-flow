@@ -16,14 +16,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { toast } from "sonner";
 import { ArrowLeft, UserPlus, Phone, Mail, MapPin, Heart, Calendar, FileText } from "lucide-react";
 import FloatingShapes from "@/components/FloatingShapes";
+import { precosModalidades, getPlanosModalidade, formatarPreco, matricula } from "@/data/precosData";
+import { TIPOS_SANGUINEOS } from "@/types/aluno";
 
-const modalidadesDisponiveis = [
-  { id: "beach_tennis", nome: "Beach Tennis" },
-  { id: "volei", nome: "Vôlei" },
-  { id: "futevolei", nome: "Futevôlei" },
-  { id: "basquete", nome: "Basquete" },
-  { id: "tenis", nome: "Tênis" },
-];
+// Lista de modalidades extraída de precosData
+const modalidadesDisponiveis = precosModalidades.map((m) => ({
+  id: m.modalidade.toLowerCase().replace(/\s+/g, "_"),
+  nome: m.modalidade,
+}));
 
 const CadastroAluno = () => {
   const navigate = useNavigate();
@@ -175,14 +175,9 @@ const CadastroAluno = () => {
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="A+">A+</SelectItem>
-                        <SelectItem value="A-">A-</SelectItem>
-                        <SelectItem value="B+">B+</SelectItem>
-                        <SelectItem value="B-">B-</SelectItem>
-                        <SelectItem value="AB+">AB+</SelectItem>
-                        <SelectItem value="AB-">AB-</SelectItem>
-                        <SelectItem value="O+">O+</SelectItem>
-                        <SelectItem value="O-">O-</SelectItem>
+                        {TIPOS_SANGUINEOS.map((tipo) => (
+                          <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -282,27 +277,49 @@ const CadastroAluno = () => {
                   Selecione as modalidades que deseja praticar
                 </p>
                 
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {modalidadesDisponiveis.map((modalidade) => (
-                    <div
-                      key={modalidade.id}
-                      className="flex items-center space-x-3 p-3 rounded-lg border border-border/50 bg-card/50 hover:bg-card/80 transition-colors"
-                    >
-                      <Checkbox
-                        id={modalidade.id}
-                        checked={formData.modalidades.includes(modalidade.id)}
-                        onCheckedChange={(checked) => 
-                          handleModalidadeChange(modalidade.id, checked as boolean)
-                        }
-                      />
-                      <Label 
-                        htmlFor={modalidade.id} 
-                        className="cursor-pointer flex-1"
+                <div className="grid gap-3">
+                  {modalidadesDisponiveis.map((modalidade) => {
+                    const planos = getPlanosModalidade(modalidade.nome);
+                    return (
+                      <div
+                        key={modalidade.id}
+                        className="p-4 rounded-lg border border-border/50 bg-card/50 space-y-3"
                       >
-                        {modalidade.nome}
-                      </Label>
-                    </div>
-                  ))}
+                        <div className="flex items-center space-x-3">
+                          <Checkbox
+                            id={modalidade.id}
+                            checked={formData.modalidades.includes(modalidade.id)}
+                            onCheckedChange={(checked) => 
+                              handleModalidadeChange(modalidade.id, checked as boolean)
+                            }
+                          />
+                          <Label 
+                            htmlFor={modalidade.id} 
+                            className="cursor-pointer font-medium"
+                          >
+                            {modalidade.nome}
+                          </Label>
+                        </div>
+                        {planos.length > 0 && (
+                          <div className="ml-6 text-sm text-muted-foreground">
+                            {planos.map((p) => (
+                              <span key={p.nome} className="mr-3">
+                                {p.nome}: {formatarPreco(p.valor)}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Info Matrícula */}
+                <div className="p-3 rounded-lg bg-primary/10 border border-primary/30">
+                  <p className="text-sm font-medium">
+                    Taxa de Matrícula: {formatarPreco(matricula.valor)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{matricula.descricao}</p>
                 </div>
               </div>
 
