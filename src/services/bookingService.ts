@@ -14,14 +14,29 @@ import {
   operatingHours, 
   pricingRules, 
   recurringClasses, 
-  singleBookings 
+  singleBookings,
+  COURT_ID,
+  COURT_NAME
 } from "@/data/mockData";
 
 // Estado local para simular o banco (será substituído por Supabase)
 let localRecurringClasses = [...recurringClasses];
 let localSingleBookings = [...singleBookings];
 
-// === QUADRAS ===
+// === QUADRA (única) ===
+export function getCourt() {
+  return courts[0];
+}
+
+export function getCourtId() {
+  return COURT_ID;
+}
+
+export function getCourtName() {
+  return COURT_NAME;
+}
+
+// Legacy - mantido para compatibilidade
 export function getCourts() {
   return courts.filter(c => c.is_active);
 }
@@ -78,9 +93,10 @@ export function getAllValidTimes(): string[] {
 }
 
 // === PREÇOS ===
-export function getPrice(courtId: string, durationHours: number): number {
+export function getPrice(courtId?: string, durationHours: number = 1): number {
+  const id = courtId ?? COURT_ID;
   const rule = pricingRules.find(
-    p => p.court_id === courtId && p.duration_hours === durationHours && p.is_active
+    p => p.court_id === id && p.duration_hours === durationHours && p.is_active
   );
   return rule?.price ?? durationHours * 60; // fallback
 }

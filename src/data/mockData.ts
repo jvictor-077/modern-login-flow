@@ -8,19 +8,15 @@ import {
   SingleBooking 
 } from "@/types/booking";
 
-// === QUADRAS ===
+// === QUADRA (única) ===
+export const COURT_ID = "court-1";
+export const COURT_NAME = "Quadra";
+
 export const courts: Court[] = [
   {
-    id: "court-1",
-    name: "Quadra 1",
-    sport_type: "beach_tennis",
-    is_active: true,
-    created_at: new Date("2024-01-01"),
-  },
-  {
-    id: "court-2",
-    name: "Quadra 2",
-    sport_type: "volei",
+    id: COURT_ID,
+    name: COURT_NAME,
+    sport_type: "multi",
     is_active: true,
     created_at: new Date("2024-01-01"),
   },
@@ -31,37 +27,26 @@ export const courts: Court[] = [
 // Sábado: 08:00 - 22:00
 // Domingo: 08:00 - 20:00
 export const operatingHours: OperatingHours[] = [
-  // Quadra 1
-  { id: "oh-1", court_id: "court-1", day_of_week: 0, start_hour: 8, end_hour: 20, is_active: true },
-  { id: "oh-2", court_id: "court-1", day_of_week: 1, start_hour: 7, end_hour: 22, is_active: true },
-  { id: "oh-3", court_id: "court-1", day_of_week: 2, start_hour: 7, end_hour: 22, is_active: true },
-  { id: "oh-4", court_id: "court-1", day_of_week: 3, start_hour: 7, end_hour: 22, is_active: true },
-  { id: "oh-5", court_id: "court-1", day_of_week: 4, start_hour: 7, end_hour: 22, is_active: true },
-  { id: "oh-6", court_id: "court-1", day_of_week: 5, start_hour: 7, end_hour: 22, is_active: true },
-  { id: "oh-7", court_id: "court-1", day_of_week: 6, start_hour: 8, end_hour: 22, is_active: true },
-  // Quadra 2
-  { id: "oh-8", court_id: "court-2", day_of_week: 0, start_hour: 8, end_hour: 20, is_active: true },
-  { id: "oh-9", court_id: "court-2", day_of_week: 1, start_hour: 7, end_hour: 22, is_active: true },
-  { id: "oh-10", court_id: "court-2", day_of_week: 2, start_hour: 7, end_hour: 22, is_active: true },
-  { id: "oh-11", court_id: "court-2", day_of_week: 3, start_hour: 7, end_hour: 22, is_active: true },
-  { id: "oh-12", court_id: "court-2", day_of_week: 4, start_hour: 7, end_hour: 22, is_active: true },
-  { id: "oh-13", court_id: "court-2", day_of_week: 5, start_hour: 7, end_hour: 22, is_active: true },
-  { id: "oh-14", court_id: "court-2", day_of_week: 6, start_hour: 8, end_hour: 22, is_active: true },
+  { id: "oh-1", court_id: COURT_ID, day_of_week: 0, start_hour: 8, end_hour: 20, is_active: true },
+  { id: "oh-2", court_id: COURT_ID, day_of_week: 1, start_hour: 7, end_hour: 22, is_active: true },
+  { id: "oh-3", court_id: COURT_ID, day_of_week: 2, start_hour: 7, end_hour: 22, is_active: true },
+  { id: "oh-4", court_id: COURT_ID, day_of_week: 3, start_hour: 7, end_hour: 22, is_active: true },
+  { id: "oh-5", court_id: COURT_ID, day_of_week: 4, start_hour: 7, end_hour: 22, is_active: true },
+  { id: "oh-6", court_id: COURT_ID, day_of_week: 5, start_hour: 7, end_hour: 22, is_active: true },
+  { id: "oh-7", court_id: COURT_ID, day_of_week: 6, start_hour: 8, end_hour: 22, is_active: true },
 ];
 
 // === PREÇOS ===
 export const pricingRules: PricingRule[] = [
-  { id: "price-1", court_id: "court-1", duration_hours: 1, price: 60, is_active: true },
-  { id: "price-2", court_id: "court-1", duration_hours: 2, price: 120, is_active: true },
-  { id: "price-3", court_id: "court-2", duration_hours: 1, price: 60, is_active: true },
-  { id: "price-4", court_id: "court-2", duration_hours: 2, price: 120, is_active: true },
+  { id: "price-1", court_id: COURT_ID, duration_hours: 1, price: 60, is_active: true },
+  { id: "price-2", court_id: COURT_ID, duration_hours: 2, price: 120, is_active: true },
 ];
 
 // === AULAS RECORRENTES (MENSAIS) ===
 export const recurringClasses: RecurringClass[] = [
   {
     id: "rc-1",
-    court_id: "court-1",
+    court_id: COURT_ID,
     class_type: "Beach Tennis",
     instructor_name: "Prof. Carlos",
     days_of_week: [1, 3, 5], // seg, qua, sex
@@ -73,7 +58,7 @@ export const recurringClasses: RecurringClass[] = [
   },
   {
     id: "rc-2",
-    court_id: "court-2",
+    court_id: COURT_ID,
     class_type: "Vôlei",
     instructor_name: "Prof. Ana",
     days_of_week: [2, 4], // ter, qui
@@ -89,7 +74,7 @@ export const recurringClasses: RecurringClass[] = [
 export const singleBookings: SingleBooking[] = [
   {
     id: "sb-1",
-    court_id: "court-1",
+    court_id: COURT_ID,
     user_id: "user-1",
     client_name: "João Silva",
     date: new Date(2025, 11, 15),
@@ -104,7 +89,7 @@ export const singleBookings: SingleBooking[] = [
   },
   {
     id: "sb-2",
-    court_id: "court-2",
+    court_id: COURT_ID,
     user_id: "user-1",
     client_name: "João Silva",
     date: new Date(2025, 11, 18),
@@ -119,7 +104,7 @@ export const singleBookings: SingleBooking[] = [
   },
   {
     id: "sb-3",
-    court_id: "court-1",
+    court_id: COURT_ID,
     user_id: "user-1",
     client_name: "João Silva",
     date: new Date(2025, 11, 10),
@@ -134,7 +119,7 @@ export const singleBookings: SingleBooking[] = [
   },
   {
     id: "sb-4",
-    court_id: "court-2",
+    court_id: COURT_ID,
     user_id: "user-1",
     client_name: "João Silva",
     date: new Date(2025, 11, 5),
@@ -149,7 +134,7 @@ export const singleBookings: SingleBooking[] = [
   },
   {
     id: "sb-5",
-    court_id: "court-1",
+    court_id: COURT_ID,
     user_id: undefined,
     client_name: "Maria Oliveira",
     client_phone: "(11) 99999-0000",

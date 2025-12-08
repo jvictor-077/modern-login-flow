@@ -9,7 +9,6 @@ import {
   ChevronLeft, 
   ChevronRight, 
   Clock, 
-  MapPin,
   Check,
   CalendarPlus,
   DollarSign
@@ -22,7 +21,7 @@ import {
   getPrice,
   calculateEndTime,
   addSingleBooking,
-  getCourts
+  getCourtId
 } from "@/services/bookingService";
 import { pricingRules } from "@/data/mockData";
 
@@ -32,10 +31,10 @@ const ReservarHorario = () => {
   const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null);
   const [duracao, setDuracao] = useState<1 | 2>(1);
 
-  // Preços padrão da primeira quadra
-  const defaultCourtId = getCourts()[0]?.id ?? "court-1";
-  const PRECO_1H = getPrice(defaultCourtId, 1);
-  const PRECO_2H = getPrice(defaultCourtId, 2);
+  // Preços
+  const courtId = getCourtId();
+  const PRECO_1H = getPrice(courtId, 1);
+  const PRECO_2H = getPrice(courtId, 2);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -67,7 +66,6 @@ const ReservarHorario = () => {
   };
 
   const getPreco = () => {
-    const courtId = selectedSlot?.court_id ?? defaultCourtId;
     return getPrice(courtId, duracao);
   };
 
@@ -97,7 +95,7 @@ const ReservarHorario = () => {
     });
     
     toast.success("Horário reservado com sucesso!", {
-      description: `${format(selectedDate, "dd 'de' MMMM", { locale: ptBR })} - ${selectedSlot.start_time} às ${endTime} - ${selectedSlot.court_name} - R$ ${price},00`,
+      description: `${format(selectedDate, "dd 'de' MMMM", { locale: ptBR })} - ${selectedSlot.start_time} às ${endTime} - R$ ${price},00`,
     });
     
     setSelectedDate(null);
@@ -284,10 +282,6 @@ const ReservarHorario = () => {
                               <div>
                                 <p className="font-medium text-sm sm:text-base">
                                   {slot.start_time} - {calculateEndTime(slot.start_time, duracao)}
-                                </p>
-                                <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1">
-                                  <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                                  {slot.court_name}
                                 </p>
                               </div>
                             </div>
