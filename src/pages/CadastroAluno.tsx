@@ -105,7 +105,7 @@ const CadastroAluno = () => {
               <span className="text-2xl">🏐</span>
             </div>
             <div>
-              <span className="text-xl font-display font-bold">QuadraPro</span>
+              <span className="text-xl font-display font-bold">Sunset</span>
               <p className="text-xs text-muted-foreground">Cadastro de Aluno</p>
             </div>
           </div>
