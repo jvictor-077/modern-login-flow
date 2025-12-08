@@ -40,7 +40,7 @@ import {
   addSingleBooking,
   getPrice,
   calculateEndTime,
-  getCourts,
+  getCourtId,
 } from "@/services/bookingService";
 
 interface NewBookingModalProps {
@@ -51,30 +51,25 @@ export function NewBookingModal({ onBookingAdded }: NewBookingModalProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
 
-  const courts = getCourts();
-  const defaultCourtId = courts[0]?.id ?? "court-1";
+  const courtId = getCourtId();
 
   // Recurring booking state
   const [classType, setClassType] = useState("");
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const [recurringTime, setRecurringTime] = useState("");
-  const [recurringCourtId, setRecurringCourtId] = useState(defaultCourtId);
 
   // Single booking state
   const [clientName, setClientName] = useState("");
   const [singleDate, setSingleDate] = useState<Date | undefined>(undefined);
   const [singleTime, setSingleTime] = useState("");
-  const [singleCourtId, setSingleCourtId] = useState(defaultCourtId);
 
   const resetForm = () => {
     setClassType("");
     setSelectedDays([]);
     setRecurringTime("");
-    setRecurringCourtId(defaultCourtId);
     setClientName("");
     setSingleDate(undefined);
     setSingleTime("");
-    setSingleCourtId(defaultCourtId);
   };
 
   const handleSaveRecurring = () => {
@@ -99,7 +94,7 @@ export function NewBookingModal({ onBookingAdded }: NewBookingModalProps) {
     }
 
     // Verifica conflitos
-    const conflict = checkRecurringConflict(selectedDays, recurringTime, recurringCourtId);
+    const conflict = checkRecurringConflict(selectedDays, recurringTime, courtId);
     if (conflict.hasConflict) {
       const dayLabel = DAYS_OF_WEEK.find(d => d.value === conflict.conflictDay)?.label;
       toast({
@@ -112,7 +107,7 @@ export function NewBookingModal({ onBookingAdded }: NewBookingModalProps) {
 
     // Adiciona a aula
     addRecurringClass({
-      court_id: recurringCourtId,
+      court_id: courtId,
       class_type: classType,
       days_of_week: selectedDays,
       start_time: recurringTime,
@@ -150,7 +145,7 @@ export function NewBookingModal({ onBookingAdded }: NewBookingModalProps) {
     }
 
     // Verifica conflitos
-    const conflict = checkTimeConflict(singleDate, singleTime, singleCourtId);
+    const conflict = checkTimeConflict(singleDate, singleTime, courtId);
     if (conflict.hasConflict) {
       toast({
         variant: "destructive",
@@ -160,10 +155,10 @@ export function NewBookingModal({ onBookingAdded }: NewBookingModalProps) {
       return;
     }
 
-    const price = getPrice(singleCourtId, 1);
+    const price = getPrice(courtId, 1);
     
     addSingleBooking({
-      court_id: singleCourtId,
+      court_id: courtId,
       user_id: undefined, // Reserva pelo admin
       client_name: clientName,
       date: singleDate,
@@ -236,22 +231,6 @@ export function NewBookingModal({ onBookingAdded }: NewBookingModalProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>Quadra</Label>
-              <Select value={recurringCourtId} onValueChange={setRecurringCourtId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a quadra" />
-                </SelectTrigger>
-                <SelectContent>
-                  {courts.map((court) => (
-                    <SelectItem key={court.id} value={court.id}>
-                      {court.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
               <Label>Dias da Semana</Label>
               <div className="flex flex-wrap gap-2">
                 {DAYS_OF_WEEK.map((day) => (
@@ -307,22 +286,6 @@ export function NewBookingModal({ onBookingAdded }: NewBookingModalProps) {
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Quadra</Label>
-              <Select value={singleCourtId} onValueChange={setSingleCourtId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a quadra" />
-                </SelectTrigger>
-                <SelectContent>
-                  {courts.map((court) => (
-                    <SelectItem key={court.id} value={court.id}>
-                      {court.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
 
             <div className="space-y-2">
