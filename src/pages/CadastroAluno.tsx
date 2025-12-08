@@ -12,6 +12,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
 import { ArrowLeft, UserPlus, Phone, Heart, Calendar, FileText, Loader2 } from "lucide-react";
@@ -20,7 +26,6 @@ import { precosModalidades, getPlanosModalidade, formatarPreco, matricula } from
 import { TIPOS_SANGUINEOS } from "@/types/aluno";
 import { supabase } from "@/integrations/supabase/client";
 
-// Lista de modalidades extraída de precosData
 const modalidadesDisponiveis = precosModalidades.map((m) => ({
   id: m.modalidade.toLowerCase().replace(/\s+/g, "_"),
   nome: m.modalidade,
@@ -49,15 +54,12 @@ const CadastroAluno = () => {
     observacoes: "",
   });
 
-  // Estado para modalidades com plano selecionado
   const [modalidadesSelecionadas, setModalidadesSelecionadas] = useState<ModalidadeSelecionada[]>([]);
 
   const handleModalidadeToggle = (modalidadeNome: string, checked: boolean) => {
     if (checked) {
-      // Adiciona com plano vazio inicialmente
       setModalidadesSelecionadas(prev => [...prev, { modalidade: modalidadeNome, plano: "" }]);
     } else {
-      // Remove a modalidade
       setModalidadesSelecionadas(prev => prev.filter(m => m.modalidade !== modalidadeNome));
     }
   };
@@ -79,7 +81,6 @@ const CadastroAluno = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validação básica
     if (!formData.nome.trim() || !formData.email.trim() || !formData.celular.trim()) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
@@ -90,7 +91,6 @@ const CadastroAluno = () => {
       return;
     }
 
-    // Valida se todas as modalidades têm plano selecionado
     const modalidadesSemPlano = modalidadesSelecionadas.filter(m => !m.plano);
     if (modalidadesSemPlano.length > 0) {
       toast.error(`Selecione um plano para: ${modalidadesSemPlano.map(m => m.modalidade).join(", ")}`);
@@ -100,7 +100,6 @@ const CadastroAluno = () => {
     setIsSubmitting(true);
 
     try {
-      // 1. Inserir aluno na tabela alunos (sem user_id pois é cadastro público)
       const { data: alunoData, error: alunoError } = await supabase
         .from("alunos")
         .insert({
@@ -116,14 +115,13 @@ const CadastroAluno = () => {
           alergias: formData.alergias.trim() || null,
           autoriza_imagem: formData.autorizacaoImagem,
           observacoes: formData.observacoes.trim() || null,
-          situacao: "pendente", // Aguardando confirmação do admin
+          situacao: "pendente",
         })
         .select("id")
         .single();
 
       if (alunoError) {
         console.error("Erro ao cadastrar aluno:", alunoError);
-        
         if (alunoError.code === "23505") {
           toast.error("Este email já está cadastrado");
         } else {
@@ -132,7 +130,6 @@ const CadastroAluno = () => {
         return;
       }
 
-      // 2. Inserir modalidades do aluno
       const modalidadesInsert = modalidadesSelecionadas.map(m => {
         const planoInfo = getPlanosModalidade(m.modalidade).find(p => p.nome === m.plano);
         return {
@@ -149,7 +146,6 @@ const CadastroAluno = () => {
 
       if (modalidadesError) {
         console.error("Erro ao cadastrar modalidades:", modalidadesError);
-        // Não bloqueia pois o aluno já foi cadastrado
       }
 
       toast.success("Cadastro enviado com sucesso!", {
@@ -167,301 +163,295 @@ const CadastroAluno = () => {
 
   return (
     <div className="min-h-screen relative">
-      {/* Background gradient */}
-      <div 
-        className="fixed inset-0"
-        style={{ background: "var(--gradient-background)" }}
-      />
-      
+      <div className="fixed inset-0" style={{ background: "var(--gradient-background)" }} />
       <FloatingShapes />
 
-      <div className="relative z-10 container max-w-2xl mx-auto py-8 px-4">
-        {/* Header */}
-        <div className="mb-8">
+      <div className="relative z-10 container max-w-3xl mx-auto py-6 px-4">
+        {/* Header compacto */}
+        <div className="mb-4 flex items-center justify-between">
           <Link 
             to="/" 
-            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6"
+            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             Voltar
           </Link>
-
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center glow-primary">
-              <span className="text-2xl">🏐</span>
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
+              <span className="text-lg">🏐</span>
             </div>
-            <div>
-              <span className="text-xl font-display font-bold">Sunset</span>
-              <p className="text-xs text-muted-foreground">Cadastro de Aluno</p>
-            </div>
+            <span className="text-lg font-display font-bold">Sunset</span>
           </div>
         </div>
 
-        {/* Form Card */}
         <Card className="glass border-border/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <UserPlus className="h-5 w-5 text-primary" />
               Formulário de Matrícula
             </CardTitle>
-            <CardDescription>
-              Preencha seus dados para solicitar matrícula. Após o envio, aguarde a confirmação do administrador.
+            <CardDescription className="text-sm">
+              Preencha seus dados. Após o envio, aguarde a confirmação do administrador.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Dados Pessoais */}
-              <div className="space-y-4">
-                <h3 className="font-medium flex items-center gap-2 text-foreground">
-                  <FileText className="h-4 w-4 text-primary" />
-                  Dados Pessoais
-                </h3>
-                
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="nome">Nome completo *</Label>
-                    <Input
-                      id="nome"
-                      value={formData.nome}
-                      onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                      placeholder="Seu nome completo"
-                      required
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="cpf">CPF</Label>
-                    <Input
-                      id="cpf"
-                      value={formData.cpf}
-                      onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
-                      placeholder="000.000.000-00"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="dataNascimento">Data de Nascimento</Label>
-                    <Input
-                      id="dataNascimento"
-                      type="date"
-                      value={formData.dataNascimento}
-                      onChange={(e) => setFormData({ ...formData, dataNascimento: e.target.value })}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="tipoSanguineo">Tipo Sanguíneo</Label>
-                    <Select
-                      value={formData.tipoSanguineo}
-                      onValueChange={(value) => setFormData({ ...formData, tipoSanguineo: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {TIPOS_SANGUINEOS.map((tipo) => (
-                          <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Contato */}
-              <div className="space-y-4">
-                <h3 className="font-medium flex items-center gap-2 text-foreground">
-                  <Phone className="h-4 w-4 text-primary" />
-                  Contato
-                </h3>
-                
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">E-mail *</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="seu@email.com"
-                      required
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="celular">Celular *</Label>
-                    <Input
-                      id="celular"
-                      value={formData.celular}
-                      onChange={(e) => setFormData({ ...formData, celular: e.target.value })}
-                      placeholder="(00) 00000-0000"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="endereco">Endereço</Label>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Dados principais em grid */}
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="nome" className="text-sm">Nome completo *</Label>
                   <Input
-                    id="endereco"
-                    value={formData.endereco}
-                    onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
-                    placeholder="Rua, número, bairro, cidade"
+                    id="nome"
+                    value={formData.nome}
+                    onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                    placeholder="Seu nome"
+                    required
+                    className="h-9"
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="contatoEmergencia">Contato de Emergência</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="email" className="text-sm">E-mail *</Label>
                   <Input
-                    id="contatoEmergencia"
-                    value={formData.contatoEmergencia}
-                    onChange={(e) => setFormData({ ...formData, contatoEmergencia: e.target.value })}
-                    placeholder="Nome e telefone"
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="seu@email.com"
+                    required
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="celular" className="text-sm">Celular *</Label>
+                  <Input
+                    id="celular"
+                    value={formData.celular}
+                    onChange={(e) => setFormData({ ...formData, celular: e.target.value })}
+                    placeholder="(00) 00000-0000"
+                    required
+                    className="h-9"
                   />
                 </div>
               </div>
 
-              {/* Saúde */}
-              <div className="space-y-4">
-                <h3 className="font-medium flex items-center gap-2 text-foreground">
-                  <Heart className="h-4 w-4 text-primary" />
-                  Informações de Saúde
-                </h3>
-                
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="doencas">Doenças / Condições</Label>
-                    <Input
-                      id="doencas"
-                      value={formData.doencas}
-                      onChange={(e) => setFormData({ ...formData, doencas: e.target.value })}
-                      placeholder="Ex: Diabetes, Hipertensão..."
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="alergias">Alergias</Label>
-                    <Input
-                      id="alergias"
-                      value={formData.alergias}
-                      onChange={(e) => setFormData({ ...formData, alergias: e.target.value })}
-                      placeholder="Ex: Amendoim, Látex..."
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Modalidades */}
-              <div className="space-y-4">
-                <h3 className="font-medium flex items-center gap-2 text-foreground">
-                  <Calendar className="h-4 w-4 text-primary" />
-                  Modalidades e Planos *
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Selecione as modalidades e escolha o plano desejado para cada uma
-                </p>
-                
-                <div className="grid gap-3">
-                  {modalidadesDisponiveis.map((modalidade) => {
-                    const planos = getPlanosModalidade(modalidade.nome);
-                    const isSelected = isModalidadeSelecionada(modalidade.nome);
-                    const planoSelecionado = getPlanoSelecionado(modalidade.nome);
-                    
-                    return (
-                      <div
-                        key={modalidade.id}
-                        className={`p-4 rounded-lg border transition-colors ${
-                          isSelected 
-                            ? "border-primary/50 bg-primary/5" 
-                            : "border-border/50 bg-card/50"
-                        }`}
-                      >
-                        <div className="flex items-center space-x-3 mb-3">
-                          <Checkbox
-                            id={modalidade.id}
-                            checked={isSelected}
-                            onCheckedChange={(checked) => 
-                              handleModalidadeToggle(modalidade.nome, checked as boolean)
-                            }
-                          />
-                          <Label 
-                            htmlFor={modalidade.id} 
-                            className="cursor-pointer font-medium"
-                          >
-                            {modalidade.nome}
-                          </Label>
-                        </div>
-                        
-                        {isSelected && planos.length > 0 && (
-                          <div className="ml-6 space-y-2">
-                            <Label className="text-sm text-muted-foreground">Escolha o plano:</Label>
-                            <Select
-                              value={planoSelecionado}
-                              onValueChange={(value) => handlePlanoChange(modalidade.nome, value)}
-                            >
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Selecione um plano" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {planos.map((p) => (
-                                  <SelectItem key={p.nome} value={p.nome}>
-                                    {p.nome} - {formatarPreco(p.valor)}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
+              {/* Accordion para dados adicionais */}
+              <Accordion type="multiple" defaultValue={["modalidades"]} className="space-y-2">
+                {/* Dados Pessoais */}
+                <AccordionItem value="pessoais" className="border rounded-lg px-4">
+                  <AccordionTrigger className="py-3 hover:no-underline">
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                      <FileText className="h-4 w-4 text-primary" />
+                      Dados Pessoais (opcional)
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-4">
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="cpf" className="text-sm">CPF</Label>
+                        <Input
+                          id="cpf"
+                          value={formData.cpf}
+                          onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+                          placeholder="000.000.000-00"
+                          className="h-9"
+                        />
                       </div>
-                    );
-                  })}
-                </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="dataNascimento" className="text-sm">Nascimento</Label>
+                        <Input
+                          id="dataNascimento"
+                          type="date"
+                          value={formData.dataNascimento}
+                          onChange={(e) => setFormData({ ...formData, dataNascimento: e.target.value })}
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="tipoSanguineo" className="text-sm">Tipo Sanguíneo</Label>
+                        <Select
+                          value={formData.tipoSanguineo}
+                          onValueChange={(value) => setFormData({ ...formData, tipoSanguineo: value })}
+                        >
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TIPOS_SANGUINEOS.map((tipo) => (
+                              <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="contatoEmergencia" className="text-sm">Contato Emergência</Label>
+                        <Input
+                          id="contatoEmergencia"
+                          value={formData.contatoEmergencia}
+                          onChange={(e) => setFormData({ ...formData, contatoEmergencia: e.target.value })}
+                          placeholder="Nome e telefone"
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1.5 sm:col-span-2 lg:col-span-4">
+                        <Label htmlFor="endereco" className="text-sm">Endereço</Label>
+                        <Input
+                          id="endereco"
+                          value={formData.endereco}
+                          onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
+                          placeholder="Rua, número, bairro, cidade"
+                          className="h-9"
+                        />
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
 
-                {/* Info Matrícula */}
-                <div className="p-3 rounded-lg bg-primary/10 border border-primary/30">
-                  <p className="text-sm font-medium">
-                    Taxa de Matrícula: {formatarPreco(matricula.valor)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{matricula.descricao}</p>
-                </div>
-              </div>
+                {/* Saúde */}
+                <AccordionItem value="saude" className="border rounded-lg px-4">
+                  <AccordionTrigger className="py-3 hover:no-underline">
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                      <Heart className="h-4 w-4 text-primary" />
+                      Informações de Saúde (opcional)
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-4">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="doencas" className="text-sm">Doenças / Condições</Label>
+                        <Input
+                          id="doencas"
+                          value={formData.doencas}
+                          onChange={(e) => setFormData({ ...formData, doencas: e.target.value })}
+                          placeholder="Ex: Diabetes, Hipertensão..."
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="alergias" className="text-sm">Alergias</Label>
+                        <Input
+                          id="alergias"
+                          value={formData.alergias}
+                          onChange={(e) => setFormData({ ...formData, alergias: e.target.value })}
+                          placeholder="Ex: Amendoim, Látex..."
+                          className="h-9"
+                        />
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
 
-              {/* Observações e Autorizações */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="observacoes">Observações</Label>
-                  <Textarea
-                    id="observacoes"
-                    value={formData.observacoes}
-                    onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-                    placeholder="Informações adicionais que deseja compartilhar..."
-                    rows={3}
-                  />
-                </div>
+                {/* Modalidades - aberto por padrão */}
+                <AccordionItem value="modalidades" className="border rounded-lg px-4 border-primary/30">
+                  <AccordionTrigger className="py-3 hover:no-underline">
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                      <Calendar className="h-4 w-4 text-primary" />
+                      Modalidades e Planos *
+                      {modalidadesSelecionadas.length > 0 && (
+                        <span className="ml-2 text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
+                          {modalidadesSelecionadas.length} selecionada(s)
+                        </span>
+                      )}
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-4">
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {modalidadesDisponiveis.map((modalidade) => {
+                        const planos = getPlanosModalidade(modalidade.nome);
+                        const isSelected = isModalidadeSelecionada(modalidade.nome);
+                        const planoSelecionado = getPlanoSelecionado(modalidade.nome);
+                        
+                        return (
+                          <div
+                            key={modalidade.id}
+                            className={`p-3 rounded-lg border transition-colors ${
+                              isSelected ? "border-primary/50 bg-primary/5" : "border-border/50 bg-card/50"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 mb-2">
+                              <Checkbox
+                                id={modalidade.id}
+                                checked={isSelected}
+                                onCheckedChange={(checked) => 
+                                  handleModalidadeToggle(modalidade.nome, checked as boolean)
+                                }
+                              />
+                              <Label htmlFor={modalidade.id} className="cursor-pointer text-sm font-medium">
+                                {modalidade.nome}
+                              </Label>
+                            </div>
+                            
+                            {isSelected && planos.length > 0 && (
+                              <Select
+                                value={planoSelecionado}
+                                onValueChange={(value) => handlePlanoChange(modalidade.nome, value)}
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Selecione um plano" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {planos.map((p) => (
+                                    <SelectItem key={p.nome} value={p.nome} className="text-xs">
+                                      {p.nome} - {formatarPreco(p.valor)}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    <div className="mt-3 p-2 rounded-lg bg-primary/10 border border-primary/30 text-sm">
+                      <span className="font-medium">Taxa de Matrícula: {formatarPreco(matricula.valor)}</span>
+                      <span className="text-muted-foreground ml-2 text-xs">({matricula.descricao})</span>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
 
-                <div className="flex items-start space-x-3 p-4 rounded-lg border border-border/50 bg-card/50">
-                  <Checkbox
-                    id="autorizacaoImagem"
-                    checked={formData.autorizacaoImagem}
-                    onCheckedChange={(checked) => 
-                      setFormData({ ...formData, autorizacaoImagem: checked as boolean })
-                    }
-                  />
-                  <div>
-                    <Label htmlFor="autorizacaoImagem" className="cursor-pointer">
-                      Autorização de uso de imagem
-                    </Label>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Autorizo o uso da minha imagem para divulgação em redes sociais e materiais promocionais.
-                    </p>
-                  </div>
-                </div>
-              </div>
+                {/* Observações */}
+                <AccordionItem value="obs" className="border rounded-lg px-4">
+                  <AccordionTrigger className="py-3 hover:no-underline">
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                      <Phone className="h-4 w-4 text-primary" />
+                      Observações e Autorizações (opcional)
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-4 space-y-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="observacoes" className="text-sm">Observações</Label>
+                      <Textarea
+                        id="observacoes"
+                        value={formData.observacoes}
+                        onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
+                        placeholder="Informações adicionais..."
+                        rows={2}
+                        className="resize-none"
+                      />
+                    </div>
+                    <div className="flex items-start gap-2 p-3 rounded-lg border border-border/50 bg-card/50">
+                      <Checkbox
+                        id="autorizacaoImagem"
+                        checked={formData.autorizacaoImagem}
+                        onCheckedChange={(checked) => 
+                          setFormData({ ...formData, autorizacaoImagem: checked as boolean })
+                        }
+                      />
+                      <div>
+                        <Label htmlFor="autorizacaoImagem" className="cursor-pointer text-sm">
+                          Autorização de uso de imagem
+                        </Label>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Autorizo o uso da minha imagem para divulgação.
+                        </p>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
 
               {/* Submit */}
-              <div className="flex gap-4 pt-4">
+              <div className="flex gap-3 pt-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -486,9 +476,7 @@ const CadastroAluno = () => {
                 </Button>
               </div>
 
-              <p className="text-xs text-center text-muted-foreground">
-                * Campos obrigatórios
-              </p>
+              <p className="text-xs text-center text-muted-foreground">* Campos obrigatórios</p>
             </form>
           </CardContent>
         </Card>
