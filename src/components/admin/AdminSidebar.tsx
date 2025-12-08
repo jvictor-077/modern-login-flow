@@ -1,4 +1,4 @@
-import { LayoutDashboard, Package, LogOut, UtensilsCrossed, ClipboardList, BarChart3, Boxes } from "lucide-react";
+import { LayoutDashboard, Package, LogOut, UtensilsCrossed, ClipboardList, BarChart3, Boxes, ChefHat } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
   Sidebar,
@@ -22,6 +22,7 @@ const lanchoneteItems = [
   { title: "Dashboard", url: "/admin/lanchonete", icon: BarChart3 },
   { title: "Pedidos", url: "/admin/lanchonete/pedidos", icon: ClipboardList },
   { title: "Estoque", url: "/admin/lanchonete/estoque", icon: Boxes },
+  { title: "Itens de Preparo", url: "/admin/lanchonete/preparos", icon: ChefHat },
 ];
 
 export function AdminSidebar() {

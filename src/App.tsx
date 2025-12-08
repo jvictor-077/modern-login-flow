@@ -9,6 +9,7 @@ import Estoque from "./pages/Estoque";
 import LanchoneteDashboard from "./pages/lanchonete/LanchoneteDashboard";
 import LanchonetePedidos from "./pages/lanchonete/LanchonetePedidos";
 import LanchoneteEstoque from "./pages/lanchonete/LanchoneteEstoque";
+import LanchonetePreparos from "./pages/lanchonete/LanchonetePreparos";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/admin/lanchonete" element={<LanchoneteDashboard />} />
           <Route path="/admin/lanchonete/pedidos" element={<LanchonetePedidos />} />
           <Route path="/admin/lanchonete/estoque" element={<LanchoneteEstoque />} />
+          <Route path="/admin/lanchonete/preparos" element={<LanchonetePreparos />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
