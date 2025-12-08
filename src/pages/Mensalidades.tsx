@@ -53,7 +53,6 @@ interface Aluno {
   observacoes: string;
   autorizaImagem: boolean;
   situacao: "em_dia" | "pendente" | "atrasado";
-  valorMensalidade: number;
 }
 
 const modalidadesDisponiveis = [
@@ -91,7 +90,6 @@ const initialAlunos: Aluno[] = [
     observacoes: "",
     autorizaImagem: true,
     situacao: "em_dia",
-    valorMensalidade: 150,
   },
   {
     id: "2",
@@ -112,7 +110,6 @@ const initialAlunos: Aluno[] = [
     observacoes: "",
     autorizaImagem: true,
     situacao: "pendente",
-    valorMensalidade: 250,
   },
 ];
 
@@ -130,7 +127,6 @@ const emptyNovoAluno = {
   modalidades: {} as Record<string, string>,
   observacoes: "",
   autorizaImagem: true,
-  valorMensalidade: "",
 };
 
 export default function Mensalidades() {
@@ -194,7 +190,6 @@ export default function Mensalidades() {
       observacoes: novoAluno.observacoes,
       autorizaImagem: novoAluno.autorizaImagem,
       situacao: "pendente",
-      valorMensalidade: parseFloat(novoAluno.valorMensalidade) || 0,
     };
 
     setAlunos([...alunos, newAluno]);
@@ -443,20 +438,8 @@ export default function Mensalidades() {
                     </div>
                   </div>
 
-                  {/* Valor e Observações */}
+                  {/* Observações */}
                   <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="valorMensalidade">Valor da Mensalidade (R$)</Label>
-                      <Input
-                        id="valorMensalidade"
-                        type="number"
-                        value={novoAluno.valorMensalidade}
-                        onChange={(e) =>
-                          setNovoAluno({ ...novoAluno, valorMensalidade: e.target.value })
-                        }
-                        placeholder="150.00"
-                      />
-                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="observacoes">
                         Há alguma observação que deseje fazer?
@@ -511,9 +494,7 @@ export default function Mensalidades() {
                 <TableHead className="text-muted-foreground">Nome</TableHead>
                 <TableHead className="text-muted-foreground">Celular</TableHead>
                 <TableHead className="text-muted-foreground">Modalidades</TableHead>
-                <TableHead className="text-muted-foreground">Valor</TableHead>
                 <TableHead className="text-muted-foreground">Situação</TableHead>
-                <TableHead className="text-muted-foreground text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -530,27 +511,7 @@ export default function Mensalidades() {
                       ))}
                     </div>
                   </TableCell>
-                  <TableCell className="text-primary font-medium">
-                    R$ {aluno.valorMensalidade.toFixed(2)}
-                  </TableCell>
                   <TableCell>{getSituacaoBadge(aluno.situacao)}</TableCell>
-                  <TableCell className="text-right">
-                    <Select
-                      value={aluno.situacao}
-                      onValueChange={(value: Aluno["situacao"]) =>
-                        updateSituacao(aluno.id, value)
-                      }
-                    >
-                      <SelectTrigger className="w-[130px] h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover">
-                        <SelectItem value="em_dia">Em dia</SelectItem>
-                        <SelectItem value="pendente">Pendente</SelectItem>
-                        <SelectItem value="atrasado">Atrasado</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
