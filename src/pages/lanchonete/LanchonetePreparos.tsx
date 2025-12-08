@@ -17,12 +17,22 @@ import { toast } from "@/hooks/use-toast";
 import { ItemPreparo } from "@/types/lanchonete";
 import { itensPreparo } from "@/data/lanchoneteData";
 import { QRCodeScanner } from "@/components/QRCodeScanner";
+import { ScannedProductsConfirmation } from "@/components/ScannedProductsConfirmation";
 import { useIsMobile } from "@/hooks/use-mobile";
+
+interface ScannedProduct {
+  nome: string;
+  quantidade: number;
+  preco: number;
+  unidade?: string;
+}
 
 export default function LanchonetePreparos() {
   const [products, setProducts] = useState<ItemPreparo[]>(itensPreparo);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
+  const [scannedProducts, setScannedProducts] = useState<ScannedProduct[]>([]);
   const [newProduct, setNewProduct] = useState({ name: "", price: "", quantity: "", unit: "" });
   const isMobile = useIsMobile();
 
@@ -49,8 +59,13 @@ export default function LanchonetePreparos() {
     }
   };
 
-  const handleProductsScanned = (scannedProducts: { nome: string; quantidade: number; preco: number; unidade?: string }[]) => {
-    const newProducts: ItemPreparo[] = scannedProducts.map((p, index) => ({
+  const handleProductsScanned = (products: ScannedProduct[]) => {
+    setScannedProducts(products);
+    setIsConfirmationOpen(true);
+  };
+
+  const handleConfirmProducts = (confirmedProducts: ScannedProduct[]) => {
+    const newProducts: ItemPreparo[] = confirmedProducts.map((p, index) => ({
       id: `scanned-${Date.now()}-${index}`,
       nome: p.nome,
       preco: p.preco,
@@ -62,6 +77,7 @@ export default function LanchonetePreparos() {
     }));
 
     setProducts((prev) => [...prev, ...newProducts]);
+    setScannedProducts([]);
     toast({
       title: "Itens adicionados!",
       description: `${newProducts.length} itens foram adicionados ao estoque.`,
@@ -262,6 +278,14 @@ export default function LanchonetePreparos() {
         open={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}
         onProductsScanned={handleProductsScanned}
+      />
+
+      {/* Confirmation Dialog */}
+      <ScannedProductsConfirmation
+        open={isConfirmationOpen}
+        onClose={() => setIsConfirmationOpen(false)}
+        onConfirm={handleConfirmProducts}
+        products={scannedProducts}
       />
     </AdminLayout>
   );

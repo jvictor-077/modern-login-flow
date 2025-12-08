@@ -17,12 +17,22 @@ import { toast } from "@/hooks/use-toast";
 import { ProdutoEstoque } from "@/types/estoque";
 import { produtosEstoqueQuadra } from "@/data/estoqueData";
 import { QRCodeScanner } from "@/components/QRCodeScanner";
+import { ScannedProductsConfirmation } from "@/components/ScannedProductsConfirmation";
 import { useIsMobile } from "@/hooks/use-mobile";
+
+interface ScannedProduct {
+  nome: string;
+  quantidade: number;
+  preco: number;
+  unidade?: string;
+}
 
 export default function Estoque() {
   const [products, setProducts] = useState<ProdutoEstoque[]>(produtosEstoqueQuadra);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
+  const [scannedProducts, setScannedProducts] = useState<ScannedProduct[]>([]);
   const [newProduct, setNewProduct] = useState({ name: "", price: "", quantity: "" });
   const isMobile = useIsMobile();
 
@@ -49,8 +59,13 @@ export default function Estoque() {
     }
   };
 
-  const handleProductsScanned = (scannedProducts: { nome: string; quantidade: number; preco: number; unidade?: string }[]) => {
-    const newProducts: ProdutoEstoque[] = scannedProducts.map((p, index) => ({
+  const handleProductsScanned = (products: ScannedProduct[]) => {
+    setScannedProducts(products);
+    setIsConfirmationOpen(true);
+  };
+
+  const handleConfirmProducts = (confirmedProducts: ScannedProduct[]) => {
+    const newProducts: ProdutoEstoque[] = confirmedProducts.map((p, index) => ({
       id: `scanned-${Date.now()}-${index}`,
       nome: p.nome,
       preco: p.preco,
@@ -61,6 +76,7 @@ export default function Estoque() {
     }));
 
     setProducts((prev) => [...prev, ...newProducts]);
+    setScannedProducts([]);
     toast({
       title: "Produtos adicionados!",
       description: `${newProducts.length} produtos foram adicionados ao estoque.`,
@@ -245,6 +261,14 @@ export default function Estoque() {
         open={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}
         onProductsScanned={handleProductsScanned}
+      />
+
+      {/* Confirmation Dialog */}
+      <ScannedProductsConfirmation
+        open={isConfirmationOpen}
+        onClose={() => setIsConfirmationOpen(false)}
+        onConfirm={handleConfirmProducts}
+        products={scannedProducts}
       />
     </AdminLayout>
   );
