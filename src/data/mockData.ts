@@ -165,13 +165,12 @@ export const singleBookings: SingleBooking[] = [
 
 // Tipos de aulas disponíveis
 export const CLASS_TYPES = [
-  "Beach Tennis",
-  "Vôlei",
-  "Futevôlei",
-  "Pilates",
   "Funcional",
-  "Yoga",
-  "Badminton",
+  "Vôlei Adulto Noite",
+  "Vôlei Teen",
+  "Vôlei Adulto Manhã",
+  "Beach Tennis",
+  "Futevôlei",
 ];
 
 // Dias da semana

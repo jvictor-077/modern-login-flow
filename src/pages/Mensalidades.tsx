@@ -427,21 +427,6 @@ export default function Mensalidades() {
                                   </span>
                                 </label>
                               ))}
-                              <label
-                                className={`flex items-center gap-2 p-2 px-3 rounded-lg border cursor-pointer transition-colors ${
-                                  novoAluno.modalidades[modalidade] === "Aula Avulsa"
-                                    ? "border-primary bg-primary/10"
-                                    : "border-border/50 hover:border-border"
-                                }`}
-                              >
-                                <Checkbox
-                                  checked={novoAluno.modalidades[modalidade] === "Aula Avulsa"}
-                                  onCheckedChange={(checked) =>
-                                    handleModalidadeChange(modalidade, checked ? "Aula Avulsa" : "")
-                                  }
-                                />
-                                <span className="text-sm">Aula Avulsa</span>
-                              </label>
                             </div>
                           </div>
                         );
@@ -469,7 +454,7 @@ export default function Mensalidades() {
                                     {plano.nome} - {formatarPreco(plano.valor)}
                                   </SelectItem>
                                 ))}
-                                <SelectItem value="Aula Avulsa">Aula Avulsa</SelectItem>
+                                
                               </SelectContent>
                             </Select>
                           </div>
