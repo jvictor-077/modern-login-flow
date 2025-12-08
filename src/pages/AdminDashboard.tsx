@@ -4,12 +4,18 @@ import { ptBR } from "date-fns/locale";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { TimeSlotGrid } from "@/components/admin/TimeSlotGrid";
+import { NewBookingModal, Booking } from "@/components/admin/NewBookingModal";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarDays, Users, Clock, TrendingUp } from "lucide-react";
 
 export default function AdminDashboard() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [bookings, setBookings] = useState<Booking[]>([]);
+
+  const handleAddBooking = (booking: Booking) => {
+    setBookings((prev) => [...prev, booking]);
+  };
 
   const stats = [
     { label: "Reservas Hoje", value: "12", icon: CalendarDays, trend: "+3" },
@@ -70,10 +76,13 @@ export default function AdminDashboard() {
               {/* Calendar Section */}
               <Card className="bg-card/50 border-border/50 backdrop-blur-sm">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg font-display flex items-center gap-2">
-                    <CalendarDays className="w-5 h-5 text-primary" />
-                    Calendário
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg font-display flex items-center gap-2">
+                      <CalendarDays className="w-5 h-5 text-primary" />
+                      Calendário
+                    </CardTitle>
+                    <NewBookingModal bookings={bookings} onAddBooking={handleAddBooking} />
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <Calendar
@@ -95,7 +104,7 @@ export default function AdminDashboard() {
               {/* Time Slots Section */}
               <Card className="bg-card/50 border-border/50 backdrop-blur-sm">
                 <CardContent className="p-6 h-full">
-                  <TimeSlotGrid selectedDate={selectedDate} />
+                  <TimeSlotGrid selectedDate={selectedDate} bookings={bookings} />
                 </CardContent>
               </Card>
             </div>
