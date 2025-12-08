@@ -69,7 +69,7 @@ export default function Estoque() {
       id: `scanned-${Date.now()}-${index}`,
       nome: p.nome,
       preco: p.preco,
-      quantidade: p.quantidade,
+      quantidade: Math.round(p.quantidade), // Sempre arredondar para inteiro no estoque
       is_active: true,
       created_at: new Date(),
       updated_at: new Date(),

@@ -65,16 +65,26 @@ export default function LanchonetePreparos() {
   };
 
   const handleConfirmProducts = (confirmedProducts: ScannedProduct[]) => {
-    const newProducts: ItemPreparo[] = confirmedProducts.map((p, index) => ({
-      id: `scanned-${Date.now()}-${index}`,
-      nome: p.nome,
-      preco: p.preco,
-      quantidade: p.quantidade,
-      unidade: p.unidade || "unidade",
-      is_active: true,
-      created_at: new Date(),
-      updated_at: new Date(),
-    }));
+    const isKgUnit = (unit?: string) => unit?.toUpperCase() === "KG";
+    
+    const newProducts: ItemPreparo[] = confirmedProducts.map((p, index) => {
+      const unidade = p.unidade || "unidade";
+      // Se for KG, formata o nome com a quantidade decimal
+      const nomeFormatado = isKgUnit(unidade) 
+        ? `${p.nome} ${p.quantidade.toFixed(1).replace(".", ",")} KG`
+        : p.nome;
+      
+      return {
+        id: `scanned-${Date.now()}-${index}`,
+        nome: nomeFormatado,
+        preco: p.preco * p.quantidade, // Preço total do item
+        quantidade: 1, // Cada item escaneado vira 1 unidade
+        unidade: isKgUnit(unidade) ? "unidade" : unidade,
+        is_active: true,
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+    });
 
     setProducts((prev) => [...prev, ...newProducts]);
     setScannedProducts([]);
