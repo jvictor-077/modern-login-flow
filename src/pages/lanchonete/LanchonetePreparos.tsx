@@ -216,70 +216,66 @@ export default function LanchonetePreparos() {
             </div>
           </div>
 
-          {/* Products by Category */}
-          <div className="space-y-6">
-            {Object.entries(groupedProducts).map(([category, categoryProducts]) => (
-              <Card key={category} className="border-border/50 bg-card/50 backdrop-blur-sm">
-                <CardHeader className="border-b border-border/50">
-                  <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                    <Package className="h-5 w-5 text-primary" />
-                    {category}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="divide-y divide-border/50">
-                    {categoryProducts.map((product) => (
-                      <div
-                        key={product.id}
-                        className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
+          {/* Products List */}
+          <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+            <CardHeader className="border-b border-border/50">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                <Package className="h-5 w-5 text-primary" />
+                Itens em Estoque
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y divide-border/50">
+                {products.map((product) => (
+                  <div
+                    key={product.id}
+                    className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-foreground truncate">
+                        {product.name}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        R$ {product.price.toFixed(2).replace(".", ",")} / {product.unit}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-3 ml-4">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 border-border/50 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50"
+                        onClick={() => handleQuantityChange(product.id, -1)}
                       >
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-medium text-foreground truncate">
-                            {product.name}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">
-                            R$ {product.price.toFixed(2).replace(".", ",")} / {product.unit}
-                          </p>
-                        </div>
+                        <Minus className="h-4 w-4" />
+                      </Button>
 
-                        <div className="flex items-center gap-3 ml-4">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8 border-border/50 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50"
-                            onClick={() => handleQuantityChange(product.id, -1)}
-                          >
-                            <Minus className="h-4 w-4" />
-                          </Button>
+                      <span className={`w-12 text-center font-semibold tabular-nums ${
+                        product.quantity <= 5 ? "text-destructive" : "text-foreground"
+                      }`}>
+                        {product.quantity}
+                      </span>
 
-                          <span className={`w-12 text-center font-semibold tabular-nums ${
-                            product.quantity <= 5 ? "text-destructive" : "text-foreground"
-                          }`}>
-                            {product.quantity}
-                          </span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 border-border/50 hover:bg-accent/50 hover:text-accent-foreground hover:border-accent/50"
+                        onClick={() => handleQuantityChange(product.id, 1)}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
 
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8 border-border/50 hover:bg-accent/50 hover:text-accent-foreground hover:border-accent/50"
-                            onClick={() => handleQuantityChange(product.id, 1)}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-
-                          <div className="w-24 text-right">
-                            <span className="font-medium text-foreground">
-                              R$ {(product.price * product.quantity).toFixed(2).replace(".", ",")}
-                            </span>
-                          </div>
-                        </div>
+                      <div className="w-24 text-right">
+                        <span className="font-medium text-foreground">
+                          R$ {(product.price * product.quantity).toFixed(2).replace(".", ",")}
+                        </span>
                       </div>
-                    ))}
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Total */}
           <Card className="mt-6 border-primary/30 bg-primary/5">
