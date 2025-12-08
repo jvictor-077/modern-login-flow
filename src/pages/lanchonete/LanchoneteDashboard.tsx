@@ -1,46 +1,40 @@
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, ShoppingBag, TrendingUp, Users } from "lucide-react";
-
-const stats = [
-  {
-    title: "Vendas Hoje",
-    value: "R$ 1.245,00",
-    icon: DollarSign,
-    change: "+12%",
-    changeType: "positive" as const,
-  },
-  {
-    title: "Pedidos Hoje",
-    value: "47",
-    icon: ShoppingBag,
-    change: "+8%",
-    changeType: "positive" as const,
-  },
-  {
-    title: "Ticket Médio",
-    value: "R$ 26,49",
-    icon: TrendingUp,
-    change: "+5%",
-    changeType: "positive" as const,
-  },
-  {
-    title: "Clientes Atendidos",
-    value: "38",
-    icon: Users,
-    change: "+15%",
-    changeType: "positive" as const,
-  },
-];
-
-const recentOrders = [
-  { id: "001", client: "João Silva", items: "2x Água, 1x Salgado", total: 18.50, status: "Entregue" },
-  { id: "002", client: "Maria Santos", items: "1x Refrigerante, 2x Açaí", total: 42.00, status: "Preparando" },
-  { id: "003", client: "Pedro Costa", items: "3x Energético", total: 45.00, status: "Entregue" },
-  { id: "004", client: "Ana Oliveira", items: "1x Suco Natural, 1x Sanduíche", total: 25.00, status: "Pendente" },
-];
+import { estatisticasLanchonete, pedidos } from "@/data/lanchoneteData";
+import { STATUS_PEDIDO_CONFIG } from "@/types/lanchonete";
 
 export default function LanchoneteDashboard() {
+  const stats = [
+    {
+      title: "Vendas Hoje",
+      value: `R$ ${estatisticasLanchonete.vendasHoje.toFixed(2).replace(".", ",")}`,
+      icon: DollarSign,
+      change: "+12%",
+    },
+    {
+      title: "Pedidos Hoje",
+      value: String(estatisticasLanchonete.pedidosHoje),
+      icon: ShoppingBag,
+      change: "+8%",
+    },
+    {
+      title: "Ticket Médio",
+      value: `R$ ${estatisticasLanchonete.ticketMedio.toFixed(2).replace(".", ",")}`,
+      icon: TrendingUp,
+      change: "+5%",
+    },
+    {
+      title: "Clientes Atendidos",
+      value: String(estatisticasLanchonete.clientesAtendidos),
+      icon: Users,
+      change: "+15%",
+    },
+  ];
+
+  // Últimos 4 pedidos
+  const recentOrders = pedidos.slice(0, 4);
+
   return (
     <AdminLayout
       title="Dashboard Lanchonete"
@@ -73,31 +67,30 @@ export default function LanchoneteDashboard() {
         </CardHeader>
         <CardContent className="p-0">
           <div className="divide-y divide-border/50">
-            {recentOrders.map((order) => (
-              <div key={order.id} className="flex items-center justify-between p-3 sm:p-4 hover:bg-muted/30 transition-colors">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <span className="text-xs sm:text-sm font-medium text-muted-foreground">#{order.id}</span>
-                    <span className="font-medium text-foreground text-sm sm:text-base truncate">{order.client}</span>
+            {recentOrders.map((order) => {
+              const statusConfig = STATUS_PEDIDO_CONFIG[order.status];
+              const itemsText = order.itens.map(i => `${i.quantidade}x ${i.nome}`).join(", ");
+              
+              return (
+                <div key={order.id} className="flex items-center justify-between p-3 sm:p-4 hover:bg-muted/30 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <span className="text-xs sm:text-sm font-medium text-muted-foreground">#{order.id.replace("ped-", "")}</span>
+                      <span className="font-medium text-foreground text-sm sm:text-base truncate">{order.cliente_nome}</span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-1 truncate">{itemsText}</p>
                   </div>
-                  <p className="text-xs sm:text-sm text-muted-foreground mt-1 truncate">{order.items}</p>
+                  <div className="text-right ml-2 flex-shrink-0">
+                    <p className="font-semibold text-foreground text-sm sm:text-base">
+                      R$ {order.total.toFixed(2).replace(".", ",")}
+                    </p>
+                    <span className={`text-xs px-2 py-1 rounded-full ${statusConfig.color}`}>
+                      {statusConfig.label}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-right ml-2 flex-shrink-0">
-                  <p className="font-semibold text-foreground text-sm sm:text-base">
-                    R$ {order.total.toFixed(2).replace(".", ",")}
-                  </p>
-                  <span className={`text-xs px-2 py-1 rounded-full ${
-                    order.status === "Entregue" 
-                      ? "bg-green-500/10 text-green-500" 
-                      : order.status === "Preparando"
-                      ? "bg-amber-500/10 text-amber-500"
-                      : "bg-muted text-muted-foreground"
-                  }`}>
-                    {order.status}
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </CardContent>
       </Card>

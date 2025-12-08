@@ -14,27 +14,11 @@ import {
 } from "@/components/ui/dialog";
 import { ScanLine, Plus, Minus, Package, PlusCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-}
-
-const initialProducts: Product[] = [
-  { id: "1", name: "Bola de Vôlei Mikasa", price: 189.90, quantity: 8 },
-  { id: "2", name: "Raquete Beach Tennis Pro", price: 459.90, quantity: 5 },
-  { id: "3", name: "Rede de Vôlei Profissional", price: 299.90, quantity: 3 },
-  { id: "4", name: "Kit Marcação de Quadra", price: 89.90, quantity: 12 },
-  { id: "5", name: "Bola de Beach Tennis (Pack 3)", price: 59.90, quantity: 20 },
-  { id: "6", name: "Grip Overgrip (Pack 10)", price: 34.90, quantity: 15 },
-  { id: "7", name: "Squeeze 1L", price: 24.90, quantity: 25 },
-  { id: "8", name: "Toalha Esportiva", price: 39.90, quantity: 18 },
-];
+import { ProdutoEstoque } from "@/types/estoque";
+import { produtosEstoqueQuadra } from "@/data/estoqueData";
 
 export default function Estoque() {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [products, setProducts] = useState<ProdutoEstoque[]>(produtosEstoqueQuadra);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newProduct, setNewProduct] = useState({ name: "", price: "", quantity: "" });
 
@@ -42,8 +26,8 @@ export default function Estoque() {
     setProducts((prev) =>
       prev.map((product) => {
         if (product.id === id) {
-          const newQuantity = Math.max(0, product.quantity + delta);
-          return { ...product, quantity: newQuantity };
+          const newQuantity = Math.max(0, product.quantidade + delta);
+          return { ...product, quantidade: newQuantity, updated_at: new Date() };
         }
         return product;
       })
@@ -67,11 +51,14 @@ export default function Estoque() {
       return;
     }
 
-    const product: Product = {
-      id: Date.now().toString(),
-      name: newProduct.name.trim(),
-      price: parseFloat(newProduct.price.replace(",", ".")),
-      quantity: parseInt(newProduct.quantity),
+    const product: ProdutoEstoque = {
+      id: `prod-${Date.now()}`,
+      nome: newProduct.name.trim(),
+      preco: parseFloat(newProduct.price.replace(",", ".")),
+      quantidade: parseInt(newProduct.quantity),
+      is_active: true,
+      created_at: new Date(),
+      updated_at: new Date(),
     };
 
     setProducts((prev) => [...prev, product]);
@@ -79,12 +66,12 @@ export default function Estoque() {
     setIsAddDialogOpen(false);
     toast({
       title: "Produto adicionado",
-      description: `${product.name} foi adicionado ao estoque.`,
+      description: `${product.nome} foi adicionado ao estoque.`,
     });
   };
 
   const totalValue = products.reduce(
-    (acc, product) => acc + product.price * product.quantity,
+    (acc, product) => acc + product.preco * product.quantidade,
     0
   );
 
@@ -173,10 +160,10 @@ export default function Estoque() {
               >
                 <div className="flex-1 min-w-0 mr-2">
                   <h3 className="font-medium text-foreground truncate text-sm sm:text-base">
-                    {product.name}
+                    {product.nome}
                   </h3>
                   <p className="text-xs sm:text-sm text-muted-foreground">
-                    R$ {product.price.toFixed(2).replace(".", ",")} / unidade
+                    R$ {product.preco.toFixed(2).replace(".", ",")} / unidade
                   </p>
                 </div>
 
@@ -191,7 +178,7 @@ export default function Estoque() {
                   </Button>
 
                   <span className="w-8 sm:w-12 text-center font-semibold text-foreground tabular-nums text-sm sm:text-base">
-                    {product.quantity}
+                    {product.quantidade}
                   </span>
 
                   <Button
@@ -205,7 +192,7 @@ export default function Estoque() {
 
                   <div className="w-20 sm:w-28 text-right">
                     <span className="font-medium text-foreground text-sm sm:text-base">
-                      R$ {(product.price * product.quantity).toFixed(2).replace(".", ",")}
+                      R$ {(product.preco * product.quantidade).toFixed(2).replace(".", ",")}
                     </span>
                   </div>
                 </div>

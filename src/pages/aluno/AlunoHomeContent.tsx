@@ -10,68 +10,11 @@ import {
   Moon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { alunoLogado, cronogramaAulas } from "@/data/alunosData";
+import { DIAS_SEMANA } from "@/types/aluno";
 
-// Dados mockados do aluno
-const alunoData = {
-  nome: "João Silva",
-  situacao: "em_dia" as const,
-  modalidades: [
-    { id: "beach_tennis", nome: "Beach Tennis" },
-    { id: "volei", nome: "Vôlei" },
-  ]
-};
-
-// Cronograma de aulas mockado
-const cronograma = [
-  {
-    id: 1,
-    modalidade: "Beach Tennis",
-    diaSemana: "Segunda-feira",
-    horario: "07:00 - 08:00",
-    local: "Quadra 1",
-    professor: "Carlos",
-    periodo: "manhã"
-  },
-  {
-    id: 2,
-    modalidade: "Beach Tennis",
-    diaSemana: "Quarta-feira",
-    horario: "07:00 - 08:00",
-    local: "Quadra 1",
-    professor: "Carlos",
-    periodo: "manhã"
-  },
-  {
-    id: 3,
-    modalidade: "Beach Tennis",
-    diaSemana: "Sexta-feira",
-    horario: "07:00 - 08:00",
-    local: "Quadra 1",
-    professor: "Carlos",
-    periodo: "manhã"
-  },
-  {
-    id: 4,
-    modalidade: "Vôlei",
-    diaSemana: "Terça-feira",
-    horario: "18:00 - 19:00",
-    local: "Quadra 2",
-    professor: "Marina",
-    periodo: "noite"
-  },
-  {
-    id: 5,
-    modalidade: "Vôlei",
-    diaSemana: "Quinta-feira",
-    horario: "18:00 - 19:00",
-    local: "Quadra 2",
-    professor: "Marina",
-    periodo: "noite"
-  },
-];
-
-const diasSemana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
-const diasSemanaFull = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
+const diasSemana = DIAS_SEMANA.map(d => d.label);
+const diasSemanaFull = DIAS_SEMANA.map(d => d.full);
 
 const AlunoHomeContent = () => {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
@@ -84,13 +27,16 @@ const AlunoHomeContent = () => {
     month: 'long' 
   });
 
-  const aulasHoje = cronograma.filter(aula => 
-    aula.diaSemana.toLowerCase() === diaSemanaHoje.toLowerCase()
+  // Filtra aulas do aluno logado
+  const cronogramaAluno = cronogramaAulas.filter(aula => aula.aluno_id === alunoLogado.id);
+
+  const aulasHoje = cronogramaAluno.filter(aula => 
+    aula.dia_semana.toLowerCase() === diaSemanaHoje.toLowerCase()
   );
 
   const aulasFiltradas = selectedDay 
-    ? cronograma.filter(aula => aula.diaSemana.toLowerCase().includes(selectedDay.toLowerCase()))
-    : cronograma;
+    ? cronogramaAluno.filter(aula => aula.dia_semana.toLowerCase().includes(selectedDay.toLowerCase()))
+    : cronogramaAluno;
 
   const getModalidadeColor = (modalidade: string) => {
     const colors: Record<string, string> = {
@@ -109,19 +55,19 @@ const AlunoHomeContent = () => {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-display font-bold">
-            Olá, {alunoData.nome.split(' ')[0]}! 👋
+            Olá, {alunoLogado.nome.split(' ')[0]}! 👋
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground capitalize">{dataFormatada}</p>
         </div>
         
         <Badge 
           variant="outline" 
-          className={`w-fit ${alunoData.situacao === "em_dia" 
+          className={`w-fit ${alunoLogado.situacao === "em_dia" 
             ? "bg-accent/10 text-accent border-accent/30" 
             : "bg-destructive/10 text-destructive border-destructive/30"
           }`}
         >
-          {alunoData.situacao === "em_dia" ? "Matrícula em dia" : "Pendente"}
+          {alunoLogado.situacao === "em_dia" ? "Matrícula em dia" : "Pendente"}
         </Badge>
       </div>
 
@@ -170,7 +116,7 @@ const AlunoHomeContent = () => {
       <div>
         <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Minhas Modalidades</h2>
         <div className="flex flex-wrap gap-2">
-          {alunoData.modalidades.map((mod) => (
+          {alunoLogado.modalidades.map((mod) => (
             <Badge 
               key={mod.id}
               variant="outline"
@@ -233,7 +179,7 @@ const AlunoHomeContent = () => {
               </div>
 
               <div>
-                <p className="font-semibold text-sm sm:text-base">{aula.diaSemana}</p>
+                <p className="font-semibold text-sm sm:text-base">{aula.dia_semana}</p>
                 <p className="text-xl sm:text-2xl font-bold text-primary">{aula.horario.split(' - ')[0]}</p>
                 <p className="text-xs sm:text-sm text-muted-foreground">até {aula.horario.split(' - ')[1]}</p>
               </div>
