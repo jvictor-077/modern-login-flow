@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Search, UserPlus, Phone, User, CreditCard, MapPin, Heart, Calendar } from "lucide-react";
+import { Plus, Search, UserPlus, Phone, User, CreditCard, MapPin, Heart, Calendar, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 
 interface Modalidade {
@@ -630,6 +630,20 @@ export default function Mensalidades() {
                         <p className="text-muted-foreground text-sm">Nenhuma modalidade cadastrada</p>
                       )}
                     </div>
+
+                    {selectedAluno.situacao === "pendente" && (
+                      <Button
+                        onClick={() => {
+                          updateSituacao(selectedAluno.id, "em_dia");
+                          setSelectedAluno({ ...selectedAluno, situacao: "em_dia" });
+                          toast.success("Matrícula confirmada com sucesso!");
+                        }}
+                        className="w-full gap-2 bg-green-600 hover:bg-green-700"
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                        Confirmar Matrícula
+                      </Button>
+                    )}
                   </TabsContent>
 
                   {/* Aba Contato */}
