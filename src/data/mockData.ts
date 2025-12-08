@@ -69,6 +69,7 @@ export const recurringClasses: RecurringClass[] = [
     end_time: "08:00",
     is_active: true,
     created_at: new Date("2024-06-01"),
+    enrolled_students: ["user-1"], // João Silva matriculado
   },
   {
     id: "rc-2",
@@ -80,6 +81,7 @@ export const recurringClasses: RecurringClass[] = [
     end_time: "19:00",
     is_active: true,
     created_at: new Date("2024-06-01"),
+    enrolled_students: ["user-1"], // João Silva matriculado
   },
 ];
 
