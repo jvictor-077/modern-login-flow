@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import LoginForm from "@/components/LoginForm";
 import FloatingShapes from "@/components/FloatingShapes";
 import { MapPin, Calendar, Users } from "lucide-react";
@@ -98,9 +99,9 @@ const Index = () => {
           
           <p className="text-center text-sm text-muted-foreground mt-6">
             Novo por aqui?{" "}
-            <a href="#" className="text-primary hover:underline font-medium">
+            <Link to="/cadastro" className="text-primary hover:underline font-medium">
               Criar conta grátis
-            </a>
+            </Link>
           </p>
           
           {/* Sports icons decoration for mobile */}
