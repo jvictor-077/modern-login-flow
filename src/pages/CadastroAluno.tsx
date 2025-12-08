@@ -14,10 +14,11 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowLeft, UserPlus, Phone, Mail, MapPin, Heart, Calendar, FileText } from "lucide-react";
+import { ArrowLeft, UserPlus, Phone, Heart, Calendar, FileText, Loader2 } from "lucide-react";
 import FloatingShapes from "@/components/FloatingShapes";
 import { precosModalidades, getPlanosModalidade, formatarPreco, matricula } from "@/data/precosData";
 import { TIPOS_SANGUINEOS } from "@/types/aluno";
+import { supabase } from "@/integrations/supabase/client";
 
 // Lista de modalidades extraída de precosData
 const modalidadesDisponiveis = precosModalidades.map((m) => ({
@@ -25,13 +26,18 @@ const modalidadesDisponiveis = precosModalidades.map((m) => ({
   nome: m.modalidade,
 }));
 
+interface ModalidadeSelecionada {
+  modalidade: string;
+  plano: string;
+}
+
 const CadastroAluno = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     nome: "",
     email: "",
-    telefone: "",
+    celular: "",
     cpf: "",
     dataNascimento: "",
     endereco: "",
@@ -41,42 +47,122 @@ const CadastroAluno = () => {
     alergias: "",
     autorizacaoImagem: false,
     observacoes: "",
-    modalidades: [] as string[],
   });
 
-  const handleModalidadeChange = (modalidadeId: string, checked: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      modalidades: checked
-        ? [...prev.modalidades, modalidadeId]
-        : prev.modalidades.filter(m => m !== modalidadeId)
-    }));
+  // Estado para modalidades com plano selecionado
+  const [modalidadesSelecionadas, setModalidadesSelecionadas] = useState<ModalidadeSelecionada[]>([]);
+
+  const handleModalidadeToggle = (modalidadeNome: string, checked: boolean) => {
+    if (checked) {
+      // Adiciona com plano vazio inicialmente
+      setModalidadesSelecionadas(prev => [...prev, { modalidade: modalidadeNome, plano: "" }]);
+    } else {
+      // Remove a modalidade
+      setModalidadesSelecionadas(prev => prev.filter(m => m.modalidade !== modalidadeNome));
+    }
+  };
+
+  const handlePlanoChange = (modalidadeNome: string, plano: string) => {
+    setModalidadesSelecionadas(prev =>
+      prev.map(m => m.modalidade === modalidadeNome ? { ...m, plano } : m)
+    );
+  };
+
+  const isModalidadeSelecionada = (modalidadeNome: string) => {
+    return modalidadesSelecionadas.some(m => m.modalidade === modalidadeNome);
+  };
+
+  const getPlanoSelecionado = (modalidadeNome: string) => {
+    return modalidadesSelecionadas.find(m => m.modalidade === modalidadeNome)?.plano || "";
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.nome || !formData.email || !formData.telefone) {
+    // Validação básica
+    if (!formData.nome.trim() || !formData.email.trim() || !formData.celular.trim()) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
 
-    if (formData.modalidades.length === 0) {
+    if (modalidadesSelecionadas.length === 0) {
       toast.error("Selecione pelo menos uma modalidade");
+      return;
+    }
+
+    // Valida se todas as modalidades têm plano selecionado
+    const modalidadesSemPlano = modalidadesSelecionadas.filter(m => !m.plano);
+    if (modalidadesSemPlano.length > 0) {
+      toast.error(`Selecione um plano para: ${modalidadesSemPlano.map(m => m.modalidade).join(", ")}`);
       return;
     }
 
     setIsSubmitting(true);
 
-    // Simula envio para o backend
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      // 1. Inserir aluno na tabela alunos (sem user_id pois é cadastro público)
+      const { data: alunoData, error: alunoError } = await supabase
+        .from("alunos")
+        .insert({
+          nome: formData.nome.trim(),
+          email: formData.email.trim().toLowerCase(),
+          cpf: formData.cpf.trim() || null,
+          celular: formData.celular.trim() || null,
+          data_nascimento: formData.dataNascimento || null,
+          endereco: formData.endereco.trim() || null,
+          contato_emergencia: formData.contatoEmergencia.trim() || null,
+          tipo_sanguineo: formData.tipoSanguineo || null,
+          doencas: formData.doencas.trim() || null,
+          alergias: formData.alergias.trim() || null,
+          autoriza_imagem: formData.autorizacaoImagem,
+          observacoes: formData.observacoes.trim() || null,
+          situacao: "pendente", // Aguardando confirmação do admin
+        })
+        .select("id")
+        .single();
 
-    toast.success("Cadastro enviado com sucesso!", {
-      description: "Aguarde a confirmação da sua matrícula pelo administrador."
-    });
+      if (alunoError) {
+        console.error("Erro ao cadastrar aluno:", alunoError);
+        
+        if (alunoError.code === "23505") {
+          toast.error("Este email já está cadastrado");
+        } else {
+          toast.error("Erro ao enviar cadastro. Tente novamente.");
+        }
+        return;
+      }
 
-    setIsSubmitting(false);
-    navigate("/");
+      // 2. Inserir modalidades do aluno
+      const modalidadesInsert = modalidadesSelecionadas.map(m => {
+        const planoInfo = getPlanosModalidade(m.modalidade).find(p => p.nome === m.plano);
+        return {
+          aluno_id: alunoData.id,
+          modalidade: m.modalidade,
+          plano: m.plano,
+          valor: planoInfo?.valor || 0,
+        };
+      });
+
+      const { error: modalidadesError } = await supabase
+        .from("aluno_modalidades")
+        .insert(modalidadesInsert);
+
+      if (modalidadesError) {
+        console.error("Erro ao cadastrar modalidades:", modalidadesError);
+        // Não bloqueia pois o aluno já foi cadastrado
+      }
+
+      toast.success("Cadastro enviado com sucesso!", {
+        description: "Aguarde a confirmação da sua matrícula pelo administrador."
+      });
+
+      navigate("/");
+    } catch (error) {
+      console.error("Erro inesperado:", error);
+      toast.error("Erro ao enviar cadastro. Tente novamente.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -97,7 +183,7 @@ const CadastroAluno = () => {
             className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6"
           >
             <ArrowLeft className="h-4 w-4" />
-            Voltar ao login
+            Voltar
           </Link>
 
           <div className="flex items-center gap-3 mb-4">
@@ -205,11 +291,11 @@ const CadastroAluno = () => {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="telefone">Telefone *</Label>
+                    <Label htmlFor="celular">Celular *</Label>
                     <Input
-                      id="telefone"
-                      value={formData.telefone}
-                      onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                      id="celular"
+                      value={formData.celular}
+                      onChange={(e) => setFormData({ ...formData, celular: e.target.value })}
                       placeholder="(00) 00000-0000"
                       required
                     />
@@ -271,26 +357,33 @@ const CadastroAluno = () => {
               <div className="space-y-4">
                 <h3 className="font-medium flex items-center gap-2 text-foreground">
                   <Calendar className="h-4 w-4 text-primary" />
-                  Modalidades *
+                  Modalidades e Planos *
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  Selecione as modalidades que deseja praticar
+                  Selecione as modalidades e escolha o plano desejado para cada uma
                 </p>
                 
                 <div className="grid gap-3">
                   {modalidadesDisponiveis.map((modalidade) => {
                     const planos = getPlanosModalidade(modalidade.nome);
+                    const isSelected = isModalidadeSelecionada(modalidade.nome);
+                    const planoSelecionado = getPlanoSelecionado(modalidade.nome);
+                    
                     return (
                       <div
                         key={modalidade.id}
-                        className="p-4 rounded-lg border border-border/50 bg-card/50 space-y-3"
+                        className={`p-4 rounded-lg border transition-colors ${
+                          isSelected 
+                            ? "border-primary/50 bg-primary/5" 
+                            : "border-border/50 bg-card/50"
+                        }`}
                       >
-                        <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-3 mb-3">
                           <Checkbox
                             id={modalidade.id}
-                            checked={formData.modalidades.includes(modalidade.id)}
+                            checked={isSelected}
                             onCheckedChange={(checked) => 
-                              handleModalidadeChange(modalidade.id, checked as boolean)
+                              handleModalidadeToggle(modalidade.nome, checked as boolean)
                             }
                           />
                           <Label 
@@ -300,13 +393,25 @@ const CadastroAluno = () => {
                             {modalidade.nome}
                           </Label>
                         </div>
-                        {planos.length > 0 && (
-                          <div className="ml-6 text-sm text-muted-foreground">
-                            {planos.map((p) => (
-                              <span key={p.nome} className="mr-3">
-                                {p.nome}: {formatarPreco(p.valor)}
-                              </span>
-                            ))}
+                        
+                        {isSelected && planos.length > 0 && (
+                          <div className="ml-6 space-y-2">
+                            <Label className="text-sm text-muted-foreground">Escolha o plano:</Label>
+                            <Select
+                              value={planoSelecionado}
+                              onValueChange={(value) => handlePlanoChange(modalidade.nome, value)}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Selecione um plano" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {planos.map((p) => (
+                                  <SelectItem key={p.nome} value={p.nome}>
+                                    {p.nome} - {formatarPreco(p.valor)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                         )}
                       </div>
@@ -370,7 +475,14 @@ const CadastroAluno = () => {
                   disabled={isSubmitting}
                   className="flex-1 bg-gradient-to-r from-primary to-primary/80"
                 >
-                  {isSubmitting ? "Enviando..." : "Enviar Cadastro"}
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    "Enviar Cadastro"
+                  )}
                 </Button>
               </div>
 
