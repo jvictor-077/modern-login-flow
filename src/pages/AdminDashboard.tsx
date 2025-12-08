@@ -4,17 +4,17 @@ import { ptBR } from "date-fns/locale";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { TimeSlotGrid } from "@/components/admin/TimeSlotGrid";
-import { NewBookingModal, Booking } from "@/components/admin/NewBookingModal";
+import { NewBookingModal } from "@/components/admin/NewBookingModal";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarDays, Users, Clock, TrendingUp } from "lucide-react";
 
 export default function AdminDashboard() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  const handleAddBooking = (booking: Booking) => {
-    setBookings((prev) => [...prev, booking]);
+  const handleBookingAdded = () => {
+    setRefreshKey(prev => prev + 1);
   };
 
   const stats = [
@@ -81,7 +81,7 @@ export default function AdminDashboard() {
                       <CalendarDays className="w-5 h-5 text-primary" />
                       Calendário
                     </CardTitle>
-                    <NewBookingModal bookings={bookings} onAddBooking={handleAddBooking} />
+                    <NewBookingModal onBookingAdded={handleBookingAdded} />
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -104,7 +104,7 @@ export default function AdminDashboard() {
               {/* Time Slots Section */}
               <Card className="bg-card/50 border-border/50 backdrop-blur-sm">
                 <CardContent className="p-6 h-full">
-                  <TimeSlotGrid selectedDate={selectedDate} bookings={bookings} />
+                  <TimeSlotGrid key={refreshKey} selectedDate={selectedDate} />
                 </CardContent>
               </Card>
             </div>

@@ -10,75 +10,60 @@ import {
   MapPin,
   CalendarCheck
 } from "lucide-react";
-
-// Reservas mockadas do usuário
-const reservasMock = [
-  {
-    id: 1,
-    data: new Date(2025, 11, 15),
-    horaInicio: "09:00",
-    horaFim: "10:00",
-    quadra: "Quadra 1",
-    duracao: 1,
-    valor: 60,
-    status: "confirmada" as const,
-  },
-  {
-    id: 2,
-    data: new Date(2025, 11, 18),
-    horaInicio: "14:00",
-    horaFim: "16:00",
-    quadra: "Quadra 2",
-    duracao: 2,
-    valor: 120,
-    status: "confirmada" as const,
-  },
-  {
-    id: 3,
-    data: new Date(2025, 11, 10),
-    horaInicio: "10:00",
-    horaFim: "11:00",
-    quadra: "Quadra 1",
-    duracao: 1,
-    valor: 60,
-    status: "concluida" as const,
-  },
-  {
-    id: 4,
-    data: new Date(2025, 11, 5),
-    horaInicio: "15:00",
-    horaFim: "17:00",
-    quadra: "Quadra 2",
-    duracao: 2,
-    valor: 120,
-    status: "concluida" as const,
-  },
-];
-
-type Reserva = typeof reservasMock[0];
+import { SingleBooking, BookingStatus } from "@/types/booking";
+import { getSingleBookings } from "@/services/bookingService";
+import { getCourtById } from "@/services/bookingService";
 
 const MinhasReservas = () => {
-  const [filtro, setFiltro] = useState<"todas" | "confirmada" | "concluida">("todas");
+  const [filtro, setFiltro] = useState<"todas" | "confirmed" | "completed">("todas");
 
-  const reservasFiltradas = reservasMock.filter(r => {
+  // Busca reservas do usuário logado
+  const userId = "user-1"; // TODO: pegar do contexto de auth
+  const reservas = getSingleBookings(userId);
+
+  const reservasFiltradas = reservas.filter(r => {
     if (filtro === "todas") return true;
-    return r.status === filtro;
+    if (filtro === "confirmed") return r.status === "confirmed" || r.status === "pending";
+    if (filtro === "completed") return r.status === "completed";
+    return true;
   });
 
-  const getStatusBadge = (status: Reserva["status"]) => {
-    if (status === "confirmada") {
-      return (
-        <Badge className="bg-accent/20 text-accent border-accent/30 text-[10px] sm:text-xs">
-          <CalendarCheck className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1" />
-          Confirmada
-        </Badge>
-      );
+  const getStatusBadge = (status: BookingStatus) => {
+    switch (status) {
+      case "pending":
+        return (
+          <Badge className="bg-yellow-500/20 text-yellow-600 border-yellow-500/30 text-[10px] sm:text-xs">
+            <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1" />
+            Pendente
+          </Badge>
+        );
+      case "confirmed":
+        return (
+          <Badge className="bg-accent/20 text-accent border-accent/30 text-[10px] sm:text-xs">
+            <CalendarCheck className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1" />
+            Confirmada
+          </Badge>
+        );
+      case "completed":
+        return (
+          <Badge variant="secondary" className="text-[10px] sm:text-xs">
+            Concluída
+          </Badge>
+        );
+      case "cancelled":
+        return (
+          <Badge variant="destructive" className="text-[10px] sm:text-xs">
+            Cancelada
+          </Badge>
+        );
+      default:
+        return null;
     }
-    return (
-      <Badge variant="secondary" className="text-[10px] sm:text-xs">
-        Concluída
-      </Badge>
-    );
+  };
+
+  const getCourtName = (courtId: string) => {
+    const court = getCourtById(courtId);
+    return court?.name ?? "Quadra";
   };
 
   return (
@@ -99,17 +84,17 @@ const MinhasReservas = () => {
           Todas
         </Button>
         <Button
-          variant={filtro === "confirmada" ? "default" : "outline"}
+          variant={filtro === "confirmed" ? "default" : "outline"}
           size="sm"
-          onClick={() => setFiltro("confirmada")}
+          onClick={() => setFiltro("confirmed")}
           className="text-xs sm:text-sm h-8 sm:h-9 shrink-0"
         >
           Confirmadas
         </Button>
         <Button
-          variant={filtro === "concluida" ? "default" : "outline"}
+          variant={filtro === "completed" ? "default" : "outline"}
           size="sm"
-          onClick={() => setFiltro("concluida")}
+          onClick={() => setFiltro("completed")}
           className="text-xs sm:text-sm h-8 sm:h-9 shrink-0"
         >
           Concluídas
@@ -120,39 +105,39 @@ const MinhasReservas = () => {
       {reservasFiltradas.length > 0 ? (
         <div className="grid gap-3 sm:gap-4">
           {reservasFiltradas.map((reserva) => (
-            <Card key={reserva.id} className={reserva.status === "concluida" ? "opacity-70" : ""}>
+            <Card key={reserva.id} className={reserva.status === "completed" ? "opacity-70" : ""}>
               <CardContent className="p-3 sm:p-4">
                 <div className="flex items-start gap-3 sm:gap-4">
                   <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg sm:rounded-xl bg-primary/10 flex flex-col items-center justify-center shrink-0">
                     <span className="text-base sm:text-lg font-bold text-primary">
-                      {format(reserva.data, "dd")}
+                      {format(reserva.date, "dd")}
                     </span>
                     <span className="text-[10px] sm:text-xs text-muted-foreground uppercase">
-                      {format(reserva.data, "MMM", { locale: ptBR })}
+                      {format(reserva.date, "MMM", { locale: ptBR })}
                     </span>
                   </div>
                   
                   <div className="flex-1 min-w-0 space-y-1">
                     <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                       <span className="font-medium text-sm sm:text-base capitalize truncate">
-                        {format(reserva.data, "EEEE", { locale: ptBR })}
+                        {format(reserva.date, "EEEE", { locale: ptBR })}
                       </span>
                       {getStatusBadge(reserva.status)}
                     </div>
                     <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
-                        {reserva.horaInicio} - {reserva.horaFim}
+                        {reserva.start_time} - {reserva.end_time}
                       </span>
                       <span className="flex items-center gap-1">
                         <MapPin className="h-3 w-3 sm:h-4 sm:w-4" />
-                        {reserva.quadra}
+                        {getCourtName(reserva.court_id)}
                       </span>
                     </div>
                     <div className="text-xs sm:text-sm">
-                      <span className="text-muted-foreground">{reserva.duracao}h</span>
+                      <span className="text-muted-foreground">{reserva.duration_hours}h</span>
                       <span className="mx-1.5 sm:mx-2">•</span>
-                      <span className="text-primary font-bold">R$ {reserva.valor},00</span>
+                      <span className="text-primary font-bold">R$ {reserva.price},00</span>
                     </div>
                   </div>
                 </div>
@@ -167,7 +152,7 @@ const MinhasReservas = () => {
             <p className="text-sm sm:text-base text-muted-foreground">
               {filtro === "todas" 
                 ? "Você ainda não possui reservas"
-                : `Nenhuma reserva ${filtro === "confirmada" ? "confirmada" : "concluída"}`
+                : `Nenhuma reserva ${filtro === "confirmed" ? "confirmada" : "concluída"}`
               }
             </p>
             <Button variant="link" className="mt-2 text-sm" asChild>

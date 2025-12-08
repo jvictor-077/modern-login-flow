@@ -14,63 +14,27 @@ import {
   DollarSign
 } from "lucide-react";
 import { toast } from "sonner";
-
-// Horários disponíveis por dia da semana (mockado)
-const horariosDisponiveisPorDia: Record<number, { id: number; hora: string; quadra: string; disponivel: boolean }[]> = {
-  0: [
-    { id: 1, hora: "09:00", quadra: "Quadra 1", disponivel: true },
-    { id: 2, hora: "10:00", quadra: "Quadra 1", disponivel: true },
-    { id: 3, hora: "11:00", quadra: "Quadra 2", disponivel: true },
-    { id: 4, hora: "14:00", quadra: "Quadra 1", disponivel: false },
-    { id: 5, hora: "15:00", quadra: "Quadra 2", disponivel: true },
-    { id: 6, hora: "16:00", quadra: "Quadra 1", disponivel: true },
-  ],
-  1: [
-    { id: 7, hora: "07:00", quadra: "Quadra 1", disponivel: true },
-    { id: 8, hora: "08:00", quadra: "Quadra 1", disponivel: true },
-    { id: 9, hora: "18:00", quadra: "Quadra 2", disponivel: true },
-    { id: 10, hora: "19:00", quadra: "Quadra 1", disponivel: true },
-  ],
-  2: [
-    { id: 11, hora: "07:00", quadra: "Quadra 1", disponivel: true },
-    { id: 12, hora: "08:00", quadra: "Quadra 2", disponivel: true },
-    { id: 13, hora: "17:00", quadra: "Quadra 1", disponivel: true },
-    { id: 14, hora: "18:00", quadra: "Quadra 2", disponivel: false },
-  ],
-  3: [
-    { id: 15, hora: "09:00", quadra: "Quadra 1", disponivel: true },
-    { id: 16, hora: "10:00", quadra: "Quadra 2", disponivel: true },
-    { id: 17, hora: "14:00", quadra: "Quadra 1", disponivel: true },
-  ],
-  4: [
-    { id: 18, hora: "07:00", quadra: "Quadra 1", disponivel: true },
-    { id: 19, hora: "08:00", quadra: "Quadra 2", disponivel: true },
-    { id: 20, hora: "19:00", quadra: "Quadra 1", disponivel: true },
-  ],
-  5: [
-    { id: 21, hora: "07:00", quadra: "Quadra 1", disponivel: true },
-    { id: 22, hora: "17:00", quadra: "Quadra 2", disponivel: true },
-    { id: 23, hora: "18:00", quadra: "Quadra 1", disponivel: true },
-    { id: 24, hora: "19:00", quadra: "Quadra 2", disponivel: true },
-  ],
-  6: [
-    { id: 25, hora: "08:00", quadra: "Quadra 1", disponivel: true },
-    { id: 26, hora: "09:00", quadra: "Quadra 2", disponivel: true },
-    { id: 27, hora: "10:00", quadra: "Quadra 1", disponivel: true },
-    { id: 28, hora: "11:00", quadra: "Quadra 2", disponivel: false },
-    { id: 29, hora: "14:00", quadra: "Quadra 1", disponivel: true },
-    { id: 30, hora: "15:00", quadra: "Quadra 2", disponivel: true },
-  ],
-};
-
-const PRECO_1H = 60;
-const PRECO_2H = 120;
+import { AvailableSlot } from "@/types/booking";
+import { 
+  getAvailableSlotsForDate, 
+  hasAvailableSlotsForDate,
+  getPrice,
+  calculateEndTime,
+  addSingleBooking,
+  getCourts
+} from "@/services/bookingService";
+import { pricingRules } from "@/data/mockData";
 
 const ReservarHorario = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [selectedHorario, setSelectedHorario] = useState<number | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null);
   const [duracao, setDuracao] = useState<1 | 2>(1);
+
+  // Preços padrão da primeira quadra
+  const defaultCourtId = getCourts()[0]?.id ?? "court-1";
+  const PRECO_1H = getPrice(defaultCourtId, 1);
+  const PRECO_2H = getPrice(defaultCourtId, 2);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -79,66 +43,70 @@ const ReservarHorario = () => {
   const prevMonth = () => {
     setCurrentMonth(prev => addDays(startOfMonth(prev), -1));
     setSelectedDate(null);
-    setSelectedHorario(null);
+    setSelectedSlot(null);
   };
 
   const nextMonth = () => {
     setCurrentMonth(prev => addDays(endOfMonth(prev), 1));
     setSelectedDate(null);
-    setSelectedHorario(null);
-  };
-
-  const temHorariosDisponiveis = (date: Date) => {
-    const diaSemana = date.getDay();
-    const horarios = horariosDisponiveisPorDia[diaSemana] || [];
-    return horarios.some(h => h.disponivel);
+    setSelectedSlot(null);
   };
 
   const handleDateClick = (date: Date) => {
     if (isBefore(date, new Date()) && !isToday(date)) return;
-    if (!temHorariosDisponiveis(date)) return;
+    if (!hasAvailableSlotsForDate(date)) return;
     setSelectedDate(date);
-    setSelectedHorario(null);
+    setSelectedSlot(null);
     setDuracao(1);
   };
 
-  const getHorariosParaData = (date: Date) => {
-    const diaSemana = date.getDay();
-    return horariosDisponiveisPorDia[diaSemana] || [];
+  const getSlotsDisponiveis = (): AvailableSlot[] => {
+    if (!selectedDate) return [];
+    return getAvailableSlotsForDate(selectedDate).filter(s => s.is_available);
   };
 
   const getPreco = () => {
-    return duracao === 1 ? PRECO_1H : PRECO_2H;
+    const courtId = selectedSlot?.court_id ?? defaultCourtId;
+    return getPrice(courtId, duracao);
   };
 
-  const getHorarioFinal = (horaInicio: string) => {
-    const [hora] = horaInicio.split(":");
-    const horaFinal = parseInt(hora) + duracao;
-    return `${horaFinal.toString().padStart(2, "0")}:00`;
+  const getHorarioFinal = () => {
+    if (!selectedSlot) return "";
+    return calculateEndTime(selectedSlot.start_time, duracao);
   };
 
   const handleReservar = () => {
-    if (!selectedDate || !selectedHorario) return;
+    if (!selectedDate || !selectedSlot) return;
     
-    const horarios = getHorariosParaData(selectedDate);
-    const horario = horarios.find(h => h.id === selectedHorario);
+    const endTime = getHorarioFinal();
+    const price = getPreco();
     
-    if (!horario) return;
-
-    const horaFinal = getHorarioFinal(horario.hora);
+    // Adiciona a reserva usando o serviço
+    addSingleBooking({
+      court_id: selectedSlot.court_id,
+      user_id: "user-1", // TODO: pegar do contexto de auth
+      client_name: "Usuário Logado", // TODO: pegar do contexto de auth
+      date: selectedDate,
+      start_time: selectedSlot.start_time,
+      end_time: endTime,
+      duration_hours: duracao,
+      price: price,
+      status: "confirmed",
+      payment_status: "pending",
+    });
     
     toast.success("Horário reservado com sucesso!", {
-      description: `${format(selectedDate, "dd 'de' MMMM", { locale: ptBR })} - ${horario.hora} às ${horaFinal} - ${horario.quadra} - R$ ${getPreco()},00`,
+      description: `${format(selectedDate, "dd 'de' MMMM", { locale: ptBR })} - ${selectedSlot.start_time} às ${endTime} - ${selectedSlot.court_name} - R$ ${price},00`,
     });
     
     setSelectedDate(null);
-    setSelectedHorario(null);
+    setSelectedSlot(null);
     setDuracao(1);
   };
 
   const getDayStatus = (date: Date) => {
     if (isBefore(date, new Date()) && !isToday(date)) return "past";
-    if (!temHorariosDisponiveis(date)) return "unavailable";
+    if (!hasAvailableSlotsForDate(date)) return "unavailable";
     return "available";
   };
 
@@ -285,52 +253,50 @@ const ReservarHorario = () => {
                 {/* Lista de horários */}
                 <div className="space-y-2 sm:space-y-3">
                   <p className="text-xs sm:text-sm font-medium text-muted-foreground">Horários:</p>
-                  {getHorariosParaData(selectedDate)
-                    .filter(slot => slot.disponivel)
-                    .map((slot) => (
-                      <button
-                        key={slot.id}
-                        onClick={() => setSelectedHorario(slot.id)}
-                        className={`
-                          w-full p-3 sm:p-4 rounded-xl border transition-all text-left
-                          ${selectedHorario === slot.id 
-                            ? "border-primary bg-primary/10" 
-                            : "border-border hover:border-primary/50"
-                          }
-                          cursor-pointer
-                        `}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 sm:gap-3">
-                            <div className={`
-                              w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center
-                              ${selectedHorario === slot.id ? "bg-primary text-primary-foreground" : "bg-muted"}
-                            `}>
-                              {selectedHorario === slot.id ? (
-                                <Check className="h-4 w-4 sm:h-5 sm:w-5" />
-                              ) : (
-                                <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
-                              )}
-                            </div>
-                            <div>
-                              <p className="font-medium text-sm sm:text-base">
-                                {slot.hora} - {getHorarioFinal(slot.hora)}
-                              </p>
-                              <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1">
-                                <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                                {slot.quadra}
-                              </p>
-                            </div>
+                  {getSlotsDisponiveis().map((slot) => (
+                    <button
+                      key={slot.id}
+                      onClick={() => setSelectedSlot(slot)}
+                      className={`
+                        w-full p-3 sm:p-4 rounded-xl border transition-all text-left
+                        ${selectedSlot?.id === slot.id 
+                          ? "border-primary bg-primary/10" 
+                          : "border-border hover:border-primary/50"
+                        }
+                        cursor-pointer
+                      `}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className={`
+                            w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center
+                            ${selectedSlot?.id === slot.id ? "bg-primary text-primary-foreground" : "bg-muted"}
+                          `}>
+                            {selectedSlot?.id === slot.id ? (
+                              <Check className="h-4 w-4 sm:h-5 sm:w-5" />
+                            ) : (
+                              <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
+                            )}
                           </div>
-                          <Badge variant="outline" className="bg-accent/20 text-accent border-accent/30 text-[10px] sm:text-xs">
-                            Livre
-                          </Badge>
+                          <div>
+                            <p className="font-medium text-sm sm:text-base">
+                              {slot.start_time} - {calculateEndTime(slot.start_time, duracao)}
+                            </p>
+                            <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1">
+                              <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                              {slot.court_name}
+                            </p>
+                          </div>
                         </div>
-                      </button>
-                    ))}
+                        <Badge variant="outline" className="bg-accent/20 text-accent border-accent/30 text-[10px] sm:text-xs">
+                          Livre
+                        </Badge>
+                      </div>
+                    </button>
+                  ))}
                 </div>
 
-                {selectedHorario && (
+                {selectedSlot && (
                   <div className="pt-3 sm:pt-4 border-t border-border">
                     <div className="flex items-center justify-between mb-3 sm:mb-4 p-2 sm:p-3 rounded-lg bg-primary/10">
                       <span className="font-medium text-sm sm:text-base">Total:</span>

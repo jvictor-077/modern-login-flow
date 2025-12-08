@@ -29,141 +29,52 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-
-export interface RecurringBooking {
-  id: string;
-  type: "recurring";
-  classType: string;
-  daysOfWeek: number[];
-  time: string;
-}
-
-export interface SingleBooking {
-  id: string;
-  type: "single";
-  clientName: string;
-  date: Date;
-  time: string;
-}
-
-export type Booking = RecurringBooking | SingleBooking;
+import { CLASS_TYPES, DAYS_OF_WEEK } from "@/data/mockData";
+import {
+  getAllValidTimes,
+  getValidTimesForDay,
+  isTimeValidForDay,
+  checkTimeConflict,
+  checkRecurringConflict,
+  addRecurringClass,
+  addSingleBooking,
+  getPrice,
+  calculateEndTime,
+  getCourts,
+} from "@/services/bookingService";
 
 interface NewBookingModalProps {
-  bookings: Booking[];
-  onAddBooking: (booking: Booking) => void;
+  onBookingAdded?: () => void;
 }
 
-const CLASS_TYPES = [
-  "Pilates",
-  "Musculação",
-  "Funcional",
-  "Yoga",
-  "Beach Tennis",
-  "Vôlei",
-  "Badminton",
-];
-
-const DAYS_OF_WEEK = [
-  { value: 1, label: "Seg" },
-  { value: 2, label: "Ter" },
-  { value: 3, label: "Qua" },
-  { value: 4, label: "Qui" },
-  { value: 5, label: "Sex" },
-  { value: 6, label: "Sab" },
-  { value: 0, label: "Dom" },
-];
-
-function generateTimeOptions(dayOfWeek: number): string[] {
-  let startHour: number;
-  let endHour: number;
-
-  if (dayOfWeek === 0) {
-    startHour = 8;
-    endHour = 20;
-  } else if (dayOfWeek === 6) {
-    startHour = 8;
-    endHour = 22;
-  } else {
-    startHour = 7;
-    endHour = 22;
-  }
-
-  const times: string[] = [];
-  for (let hour = startHour; hour < endHour; hour++) {
-    times.push(`${hour.toString().padStart(2, "0")}:00`);
-  }
-  return times;
-}
-
-function getAllValidTimes(): string[] {
-  const times: string[] = [];
-  for (let hour = 7; hour < 22; hour++) {
-    times.push(`${hour.toString().padStart(2, "0")}:00`);
-  }
-  return times;
-}
-
-export function NewBookingModal({ bookings, onAddBooking }: NewBookingModalProps) {
+export function NewBookingModal({ onBookingAdded }: NewBookingModalProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+
+  const courts = getCourts();
+  const defaultCourtId = courts[0]?.id ?? "court-1";
 
   // Recurring booking state
   const [classType, setClassType] = useState("");
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const [recurringTime, setRecurringTime] = useState("");
+  const [recurringCourtId, setRecurringCourtId] = useState(defaultCourtId);
 
   // Single booking state
   const [clientName, setClientName] = useState("");
   const [singleDate, setSingleDate] = useState<Date | undefined>(undefined);
   const [singleTime, setSingleTime] = useState("");
+  const [singleCourtId, setSingleCourtId] = useState(defaultCourtId);
 
   const resetForm = () => {
     setClassType("");
     setSelectedDays([]);
     setRecurringTime("");
+    setRecurringCourtId(defaultCourtId);
     setClientName("");
     setSingleDate(undefined);
     setSingleTime("");
-  };
-
-  const isTimeValidForDays = (time: string, days: number[]): boolean => {
-    const hour = parseInt(time.split(":")[0]);
-    return days.every((day) => {
-      const validTimes = generateTimeOptions(day);
-      return validTimes.includes(time);
-    });
-  };
-
-  const checkConflict = (type: "recurring" | "single", data: any): boolean => {
-    if (type === "recurring") {
-      const { daysOfWeek, time } = data;
-      return bookings.some((booking) => {
-        if (booking.type === "recurring") {
-          return (
-            booking.time === time &&
-            booking.daysOfWeek.some((d) => daysOfWeek.includes(d))
-          );
-        }
-        return false;
-      });
-    } else {
-      const { date, time } = data;
-      const dayOfWeek = date.getDay();
-      const dateStr = format(date, "yyyy-MM-dd");
-
-      return bookings.some((booking) => {
-        if (booking.type === "recurring") {
-          return (
-            booking.time === time && booking.daysOfWeek.includes(dayOfWeek)
-          );
-        } else {
-          return (
-            booking.time === time &&
-            format(booking.date, "yyyy-MM-dd") === dateStr
-          );
-        }
-      });
-    }
+    setSingleCourtId(defaultCourtId);
   };
 
   const handleSaveRecurring = () => {
@@ -176,7 +87,9 @@ export function NewBookingModal({ bookings, onAddBooking }: NewBookingModalProps
       return;
     }
 
-    if (!isTimeValidForDays(recurringTime, selectedDays)) {
+    // Valida horário para todos os dias selecionados
+    const invalidDay = selectedDays.find(day => !isTimeValidForDay(recurringTime, day));
+    if (invalidDay !== undefined) {
       toast({
         variant: "destructive",
         title: "Horário inválido",
@@ -185,30 +98,35 @@ export function NewBookingModal({ bookings, onAddBooking }: NewBookingModalProps
       return;
     }
 
-    if (checkConflict("recurring", { daysOfWeek: selectedDays, time: recurringTime })) {
+    // Verifica conflitos
+    const conflict = checkRecurringConflict(selectedDays, recurringTime, recurringCourtId);
+    if (conflict.hasConflict) {
+      const dayLabel = DAYS_OF_WEEK.find(d => d.value === conflict.conflictDay)?.label;
       toast({
         variant: "destructive",
         title: "Conflito de horário",
-        description: "Já existe uma reserva para este horário em um dos dias selecionados.",
+        description: `Já existe ${conflict.conflictLabel} às ${recurringTime} na ${dayLabel}.`,
       });
       return;
     }
 
-    const newBooking: RecurringBooking = {
-      id: crypto.randomUUID(),
-      type: "recurring",
-      classType,
-      daysOfWeek: selectedDays,
-      time: recurringTime,
-    };
+    // Adiciona a aula
+    addRecurringClass({
+      court_id: recurringCourtId,
+      class_type: classType,
+      days_of_week: selectedDays,
+      start_time: recurringTime,
+      end_time: calculateEndTime(recurringTime, 1),
+      is_active: true,
+    });
 
-    onAddBooking(newBooking);
     toast({
       title: "Aula mensal criada!",
       description: `${classType} agendado com sucesso.`,
     });
     resetForm();
     setOpen(false);
+    onBookingAdded?.();
   };
 
   const handleSaveSingle = () => {
@@ -222,8 +140,7 @@ export function NewBookingModal({ bookings, onAddBooking }: NewBookingModalProps
     }
 
     const dayOfWeek = singleDate.getDay();
-    const validTimes = generateTimeOptions(dayOfWeek);
-    if (!validTimes.includes(singleTime)) {
+    if (!isTimeValidForDay(singleTime, dayOfWeek)) {
       toast({
         variant: "destructive",
         title: "Horário inválido",
@@ -232,30 +149,39 @@ export function NewBookingModal({ bookings, onAddBooking }: NewBookingModalProps
       return;
     }
 
-    if (checkConflict("single", { date: singleDate, time: singleTime })) {
+    // Verifica conflitos
+    const conflict = checkTimeConflict(singleDate, singleTime, singleCourtId);
+    if (conflict.hasConflict) {
       toast({
         variant: "destructive",
         title: "Conflito de horário",
-        description: "Já existe uma reserva para este horário.",
+        description: `Já existe ${conflict.conflictType === "recurring" ? "aula" : "reserva"} de ${conflict.conflictLabel} neste horário.`,
       });
       return;
     }
 
-    const newBooking: SingleBooking = {
-      id: crypto.randomUUID(),
-      type: "single",
-      clientName,
+    const price = getPrice(singleCourtId, 1);
+    
+    addSingleBooking({
+      court_id: singleCourtId,
+      user_id: undefined, // Reserva pelo admin
+      client_name: clientName,
       date: singleDate,
-      time: singleTime,
-    };
+      start_time: singleTime,
+      end_time: calculateEndTime(singleTime, 1),
+      duration_hours: 1,
+      price,
+      status: "confirmed",
+      payment_status: "pending",
+    });
 
-    onAddBooking(newBooking);
     toast({
       title: "Agendamento criado!",
       description: `Reserva para ${clientName} confirmada.`,
     });
     resetForm();
     setOpen(false);
+    onBookingAdded?.();
   };
 
   const handleDayToggle = (day: number, checked: boolean) => {
@@ -303,6 +229,22 @@ export function NewBookingModal({ bookings, onAddBooking }: NewBookingModalProps
                   {CLASS_TYPES.map((type) => (
                     <SelectItem key={type} value={type}>
                       {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Quadra</Label>
+              <Select value={recurringCourtId} onValueChange={setRecurringCourtId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a quadra" />
+                </SelectTrigger>
+                <SelectContent>
+                  {courts.map((court) => (
+                    <SelectItem key={court.id} value={court.id}>
+                      {court.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -368,6 +310,22 @@ export function NewBookingModal({ bookings, onAddBooking }: NewBookingModalProps
             </div>
 
             <div className="space-y-2">
+              <Label>Quadra</Label>
+              <Select value={singleCourtId} onValueChange={setSingleCourtId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a quadra" />
+                </SelectTrigger>
+                <SelectContent>
+                  {courts.map((court) => (
+                    <SelectItem key={court.id} value={court.id}>
+                      {court.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label>Data</Label>
               <Popover>
                 <PopoverTrigger asChild>
@@ -409,7 +367,7 @@ export function NewBookingModal({ bookings, onAddBooking }: NewBookingModalProps
                 </SelectTrigger>
                 <SelectContent>
                   {singleDate &&
-                    generateTimeOptions(singleDate.getDay()).map((time) => (
+                    getValidTimesForDay(singleDate.getDay()).map((time) => (
                       <SelectItem key={time} value={time}>
                         {time}
                       </SelectItem>
