@@ -1,5 +1,7 @@
 import { LayoutDashboard, Package, LogOut, UtensilsCrossed, ClipboardList, BarChart3, Boxes, ChefHat, CreditCard } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Sidebar,
   SidebarContent,
@@ -27,6 +29,14 @@ const lanchoneteItems = [
 ];
 
 export function AdminSidebar() {
+  const { signOut, user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/');
+  };
+
   return (
     <Sidebar className="border-r border-border/50">
       <SidebarHeader className="p-4 border-b border-border/50">
@@ -95,7 +105,15 @@ export function AdminSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t border-border/50">
-        <button className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200">
+        {user && (
+          <p className="text-xs text-muted-foreground mb-2 truncate px-3">
+            {user.email}
+          </p>
+        )}
+        <button 
+          onClick={handleLogout}
+          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
+        >
           <LogOut className="h-5 w-5" />
           <span>Sair</span>
         </button>

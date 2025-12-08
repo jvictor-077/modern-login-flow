@@ -14,16 +14,289 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      aluno_modalidades: {
+        Row: {
+          aluno_id: string
+          created_at: string
+          id: string
+          modalidade: string
+          plano: string
+          valor: number
+        }
+        Insert: {
+          aluno_id: string
+          created_at?: string
+          id?: string
+          modalidade: string
+          plano: string
+          valor: number
+        }
+        Update: {
+          aluno_id?: string
+          created_at?: string
+          id?: string
+          modalidade?: string
+          plano?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aluno_modalidades_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      alunos: {
+        Row: {
+          alergias: string | null
+          autoriza_imagem: boolean | null
+          celular: string | null
+          contato_emergencia: string | null
+          cpf: string | null
+          created_at: string
+          data_nascimento: string | null
+          doencas: string | null
+          email: string
+          endereco: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          situacao: Database["public"]["Enums"]["situacao_aluno"]
+          tipo_sanguineo: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          alergias?: string | null
+          autoriza_imagem?: boolean | null
+          celular?: string | null
+          contato_emergencia?: string | null
+          cpf?: string | null
+          created_at?: string
+          data_nascimento?: string | null
+          doencas?: string | null
+          email: string
+          endereco?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          situacao?: Database["public"]["Enums"]["situacao_aluno"]
+          tipo_sanguineo?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          alergias?: string | null
+          autoriza_imagem?: boolean | null
+          celular?: string | null
+          contato_emergencia?: string | null
+          cpf?: string | null
+          created_at?: string
+          data_nascimento?: string | null
+          doencas?: string | null
+          email?: string
+          endereco?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          situacao?: Database["public"]["Enums"]["situacao_aluno"]
+          tipo_sanguineo?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      aulas_recorrentes: {
+        Row: {
+          created_at: string
+          dia_semana: number
+          horario_fim: string
+          horario_inicio: string
+          id: string
+          max_alunos: number | null
+          modalidade: string
+          professor: string
+        }
+        Insert: {
+          created_at?: string
+          dia_semana: number
+          horario_fim: string
+          horario_inicio: string
+          id?: string
+          max_alunos?: number | null
+          modalidade: string
+          professor: string
+        }
+        Update: {
+          created_at?: string
+          dia_semana?: number
+          horario_fim?: string
+          horario_inicio?: string
+          id?: string
+          max_alunos?: number | null
+          modalidade?: string
+          professor?: string
+        }
+        Relationships: []
+      }
+      cronograma_aulas: {
+        Row: {
+          aluno_id: string
+          created_at: string
+          dia_semana: number
+          horario: string
+          id: string
+          local: string
+          modalidade: string
+          periodo: Database["public"]["Enums"]["periodo_aula"]
+          professor: string | null
+        }
+        Insert: {
+          aluno_id: string
+          created_at?: string
+          dia_semana: number
+          horario: string
+          id?: string
+          local?: string
+          modalidade: string
+          periodo: Database["public"]["Enums"]["periodo_aula"]
+          professor?: string | null
+        }
+        Update: {
+          aluno_id?: string
+          created_at?: string
+          dia_semana?: number
+          horario?: string
+          id?: string
+          local?: string
+          modalidade?: string
+          periodo?: Database["public"]["Enums"]["periodo_aula"]
+          professor?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cronograma_aulas_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          nome: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          nome: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          nome?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      reservas: {
+        Row: {
+          aluno_id: string
+          created_at: string
+          data: string
+          horario_fim: string
+          horario_inicio: string
+          id: string
+          status: Database["public"]["Enums"]["status_reserva"]
+          updated_at: string
+        }
+        Insert: {
+          aluno_id: string
+          created_at?: string
+          data: string
+          horario_fim: string
+          horario_inicio: string
+          id?: string
+          status?: Database["public"]["Enums"]["status_reserva"]
+          updated_at?: string
+        }
+        Update: {
+          aluno_id?: string
+          created_at?: string
+          data?: string
+          horario_fim?: string
+          horario_inicio?: string
+          id?: string
+          status?: Database["public"]["Enums"]["status_reserva"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservas_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "aluno" | "lanchonete"
+      periodo_aula: "manha" | "tarde" | "noite"
+      situacao_aluno: "em_dia" | "pendente" | "atrasado"
+      status_reserva: "pendente" | "confirmada" | "cancelada" | "concluida"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +423,11 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "aluno", "lanchonete"],
+      periodo_aula: ["manha", "tarde", "noite"],
+      situacao_aluno: ["em_dia", "pendente", "atrasado"],
+      status_reserva: ["pendente", "confirmada", "cancelada", "concluida"],
+    },
   },
 } as const
