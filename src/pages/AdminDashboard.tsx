@@ -29,7 +29,7 @@ export default function AdminDashboard() {
       <div className="min-h-screen flex w-full bg-background">
         <AdminSidebar />
 
-        <main className="flex-1 flex flex-col">
+        <main className="flex-1 flex flex-col pt-14 lg:pt-0">
           {/* Header */}
           <header className="h-16 border-b border-border/50 flex items-center justify-between px-6 bg-card/50 backdrop-blur-sm">
             <div className="flex items-center gap-4">
