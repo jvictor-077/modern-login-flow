@@ -13,3 +13,6 @@ export * from "./estoqueData";
 
 // Dados de Lanchonete
 export * from "./lanchoneteData";
+
+// Dados de Preços/Planos
+export * from "./precosData";
