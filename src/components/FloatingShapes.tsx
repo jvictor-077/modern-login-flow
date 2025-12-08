@@ -1,35 +1,51 @@
+import sportsHero from "@/assets/sports-hero.jpg";
+
 const FloatingShapes = () => {
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    <div className="absolute inset-0 overflow-hidden">
+      {/* Hero image with overlay */}
+      <div className="absolute inset-0">
+        <img 
+          src={sportsHero} 
+          alt="Quadra de esportes" 
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/90 to-background/70" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/50" />
+      </div>
+      
       {/* Main glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] animate-pulse-glow" />
+      <div className="absolute top-1/3 left-1/3 w-[500px] h-[500px] bg-primary/15 rounded-full blur-[120px] animate-pulse-glow" />
+      <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-accent/10 rounded-full blur-[100px] animate-pulse-glow" style={{ animationDelay: "1.5s" }} />
       
-      {/* Floating orbs */}
+      {/* Floating sport elements */}
       <div 
-        className="absolute top-20 left-20 w-32 h-32 rounded-full bg-gradient-to-br from-primary/20 to-transparent animate-float"
+        className="absolute top-20 right-20 w-20 h-20 rounded-full border-2 border-primary/30 animate-float flex items-center justify-center"
         style={{ animationDelay: "0s" }}
-      />
+      >
+        <span className="text-3xl">🏐</span>
+      </div>
       <div 
-        className="absolute bottom-32 right-32 w-24 h-24 rounded-full bg-gradient-to-br from-primary/15 to-transparent animate-float"
+        className="absolute bottom-32 left-20 w-16 h-16 rounded-full border-2 border-accent/30 animate-float flex items-center justify-center"
         style={{ animationDelay: "2s" }}
-      />
+      >
+        <span className="text-2xl">🎾</span>
+      </div>
       <div 
-        className="absolute top-1/2 left-10 w-16 h-16 rounded-full bg-gradient-to-br from-primary/10 to-transparent animate-float"
+        className="absolute top-1/2 right-32 w-14 h-14 rounded-full border-2 border-primary/20 animate-float flex items-center justify-center"
         style={{ animationDelay: "4s" }}
-      />
+      >
+        <span className="text-xl">🏸</span>
+      </div>
       
-      {/* Grid pattern */}
+      {/* Net pattern decoration */}
       <div 
-        className="absolute inset-0 opacity-[0.02]"
+        className="absolute inset-0 opacity-[0.03]"
         style={{
-          backgroundImage: `linear-gradient(hsl(var(--primary)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)`,
-          backgroundSize: "60px 60px",
+          backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 40px, hsl(var(--primary)) 40px, hsl(var(--primary)) 41px), 
+                           repeating-linear-gradient(90deg, transparent, transparent 40px, hsl(var(--primary)) 40px, hsl(var(--primary)) 41px)`,
         }}
       />
-      
-      {/* Gradient lines */}
-      <div className="absolute top-0 left-1/4 w-px h-full bg-gradient-to-b from-transparent via-primary/20 to-transparent" />
-      <div className="absolute top-0 right-1/4 w-px h-full bg-gradient-to-b from-transparent via-primary/10 to-transparent" />
     </div>
   );
 };

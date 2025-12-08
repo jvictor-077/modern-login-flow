@@ -1,5 +1,6 @@
 import LoginForm from "@/components/LoginForm";
 import FloatingShapes from "@/components/FloatingShapes";
+import { MapPin, Calendar, Users } from "lucide-react";
 
 const Index = () => {
   return (
@@ -14,38 +15,57 @@ const Index = () => {
       <div className="hidden lg:flex flex-1 relative items-center justify-center p-12">
         <FloatingShapes />
         
-        <div className="relative z-10 max-w-md animate-fade-in">
+        <div className="relative z-10 max-w-lg animate-fade-in">
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center glow-primary">
-              <span className="text-2xl font-bold text-primary-foreground">L</span>
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center glow-primary">
+              <span className="text-3xl">🏐</span>
             </div>
-            <span className="text-2xl font-display font-bold">Lumina</span>
+            <div>
+              <span className="text-2xl font-display font-bold">QuadraPro</span>
+              <p className="text-xs text-muted-foreground">Sistema de Reservas</p>
+            </div>
           </div>
           
           <h1 className="text-4xl lg:text-5xl font-display font-bold leading-tight mb-6">
-            Bem-vindo de volta ao{" "}
-            <span className="text-gradient">futuro</span>
+            Sua quadra favorita{" "}
+            <span className="text-gradient">a um clique</span>
           </h1>
           
-          <p className="text-lg text-muted-foreground leading-relaxed">
-            Acesse sua conta para continuar explorando as possibilidades infinitas da nossa plataforma.
+          <p className="text-lg text-muted-foreground leading-relaxed mb-10">
+            Reserve quadras de vôlei, beach tennis, futevôlei e muito mais. 
+            Gerencie suas partidas e encontre parceiros para jogar.
           </p>
           
-          <div className="mt-12 flex items-center gap-6">
-            <div className="flex -space-x-3">
-              {[1, 2, 3, 4].map((i) => (
-                <div
-                  key={i}
-                  className="w-10 h-10 rounded-full bg-secondary border-2 border-background flex items-center justify-center text-xs font-medium"
-                  style={{ zIndex: 5 - i }}
-                >
-                  {String.fromCharCode(64 + i)}
-                </div>
-              ))}
+          {/* Features */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 p-4 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50">
+              <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                <Calendar className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="font-medium">Reservas em tempo real</p>
+                <p className="text-sm text-muted-foreground">Veja horários disponíveis instantaneamente</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-medium">+10.000 usuários</p>
-              <p className="text-xs text-muted-foreground">já estão conectados</p>
+            
+            <div className="flex items-center gap-4 p-4 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50">
+              <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center">
+                <Users className="w-6 h-6 text-accent" />
+              </div>
+              <div>
+                <p className="font-medium">Encontre parceiros</p>
+                <p className="text-sm text-muted-foreground">Conecte-se com outros jogadores</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4 p-4 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50">
+              <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                <MapPin className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="font-medium">Múltiplas quadras</p>
+                <p className="text-sm text-muted-foreground">Beach Tennis, Vôlei, Futevôlei e mais</p>
+              </div>
             </div>
           </div>
         </div>
@@ -56,17 +76,20 @@ const Index = () => {
         <div className="w-full max-w-md animate-slide-up" style={{ animationDelay: "0.2s", opacity: 0 }}>
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center glow-primary">
-              <span className="text-xl font-bold text-primary-foreground">L</span>
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center glow-primary">
+              <span className="text-2xl">🏐</span>
             </div>
-            <span className="text-xl font-display font-bold">Lumina</span>
+            <div>
+              <span className="text-xl font-display font-bold">QuadraPro</span>
+              <p className="text-xs text-muted-foreground">Sistema de Reservas</p>
+            </div>
           </div>
           
           <div className="glass rounded-2xl p-8 shadow-2xl">
             <div className="text-center mb-8">
-              <h2 className="text-2xl font-display font-bold mb-2">Fazer login</h2>
+              <h2 className="text-2xl font-display font-bold mb-2">Bem-vindo de volta!</h2>
               <p className="text-muted-foreground">
-                Entre com suas credenciais para acessar
+                Entre para reservar sua quadra
               </p>
             </div>
             
@@ -74,11 +97,19 @@ const Index = () => {
           </div>
           
           <p className="text-center text-sm text-muted-foreground mt-6">
-            Não tem uma conta?{" "}
+            Novo por aqui?{" "}
             <a href="#" className="text-primary hover:underline font-medium">
-              Criar conta
+              Criar conta grátis
             </a>
           </p>
+          
+          {/* Sports icons decoration for mobile */}
+          <div className="lg:hidden flex justify-center gap-4 mt-8">
+            <span className="text-2xl opacity-50">🏐</span>
+            <span className="text-2xl opacity-50">🎾</span>
+            <span className="text-2xl opacity-50">🏸</span>
+            <span className="text-2xl opacity-50">⚽</span>
+          </div>
         </div>
       </div>
     </div>

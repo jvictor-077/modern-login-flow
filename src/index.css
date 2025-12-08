@@ -10,60 +10,62 @@
 
 @layer base {
   :root {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 98%;
+    --background: 220 20% 7%;
+    --foreground: 60 20% 98%;
 
-    --card: 222 47% 8%;
-    --card-foreground: 210 40% 98%;
+    --card: 220 20% 10%;
+    --card-foreground: 60 20% 98%;
 
-    --popover: 222 47% 8%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 220 20% 10%;
+    --popover-foreground: 60 20% 98%;
 
-    --primary: 174 72% 56%;
-    --primary-foreground: 222 47% 6%;
+    --primary: 25 95% 53%;
+    --primary-foreground: 220 20% 7%;
 
-    --secondary: 222 30% 14%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 220 15% 15%;
+    --secondary-foreground: 60 20% 98%;
 
-    --muted: 222 30% 18%;
-    --muted-foreground: 215 20% 55%;
+    --muted: 220 15% 20%;
+    --muted-foreground: 220 10% 55%;
 
-    --accent: 174 72% 56%;
-    --accent-foreground: 222 47% 6%;
+    --accent: 142 70% 45%;
+    --accent-foreground: 220 20% 7%;
 
     --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 60 20% 98%;
 
-    --border: 222 30% 18%;
-    --input: 222 30% 14%;
-    --ring: 174 72% 56%;
+    --border: 220 15% 18%;
+    --input: 220 15% 15%;
+    --ring: 25 95% 53%;
 
     --radius: 0.75rem;
 
     /* Custom design tokens */
-    --gradient-primary: linear-gradient(135deg, hsl(174 72% 56%) 0%, hsl(200 80% 50%) 100%);
-    --gradient-background: linear-gradient(135deg, hsl(222 47% 6%) 0%, hsl(240 30% 8%) 50%, hsl(222 47% 6%) 100%);
-    --gradient-glow: radial-gradient(ellipse at center, hsl(174 72% 56% / 0.15) 0%, transparent 70%);
+    --gradient-primary: linear-gradient(135deg, hsl(25 95% 53%) 0%, hsl(35 100% 55%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(142 70% 45%) 0%, hsl(160 60% 40%) 100%);
+    --gradient-background: linear-gradient(145deg, hsl(220 20% 7%) 0%, hsl(230 25% 10%) 50%, hsl(220 20% 7%) 100%);
+    --gradient-glow: radial-gradient(ellipse at center, hsl(25 95% 53% / 0.15) 0%, transparent 70%);
     
-    --shadow-glow: 0 0 40px hsl(174 72% 56% / 0.25);
-    --shadow-card: 0 25px 50px -12px hsl(0 0% 0% / 0.5);
+    --shadow-glow: 0 0 50px hsl(25 95% 53% / 0.3);
+    --shadow-glow-accent: 0 0 40px hsl(142 70% 45% / 0.25);
+    --shadow-card: 0 25px 50px -12px hsl(0 0% 0% / 0.6);
     
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 
-    --sidebar-background: 222 47% 8%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 174 72% 56%;
-    --sidebar-primary-foreground: 222 47% 6%;
-    --sidebar-accent: 222 30% 14%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 222 30% 18%;
-    --sidebar-ring: 174 72% 56%;
+    --sidebar-background: 220 20% 10%;
+    --sidebar-foreground: 60 20% 98%;
+    --sidebar-primary: 25 95% 53%;
+    --sidebar-primary-foreground: 220 20% 7%;
+    --sidebar-accent: 220 15% 15%;
+    --sidebar-accent-foreground: 60 20% 98%;
+    --sidebar-border: 220 15% 18%;
+    --sidebar-ring: 25 95% 53%;
   }
 
   .dark {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 98%;
+    --background: 220 20% 7%;
+    --foreground: 60 20% 98%;
   }
 }
 
@@ -83,16 +85,25 @@
 
 @layer utilities {
   .glass {
-    @apply bg-card/60 backdrop-blur-xl border border-border/50;
+    @apply bg-card/70 backdrop-blur-xl border border-border/50;
   }
   
   .glow-primary {
     box-shadow: var(--shadow-glow);
   }
   
+  .glow-accent {
+    box-shadow: var(--shadow-glow-accent);
+  }
+  
   .text-gradient {
     @apply bg-clip-text text-transparent;
     background-image: var(--gradient-primary);
+  }
+  
+  .text-gradient-accent {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-accent);
   }
   
   .animate-float {
@@ -109,6 +120,10 @@
   
   .animate-fade-in {
     animation: fade-in 0.8s ease-out forwards;
+  }
+  
+  .animate-bounce-subtle {
+    animation: bounce-subtle 2s ease-in-out infinite;
   }
 }
 
@@ -147,5 +162,14 @@
   }
   to {
     opacity: 1;
+  }
+}
+
+@keyframes bounce-subtle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
   }
 }
