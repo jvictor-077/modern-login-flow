@@ -12,8 +12,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Plus, Minus, Package, PlusCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+
+const categories = ["Bebidas", "Salgados", "Açaí", "Lanches", "Doces", "Outros"];
 
 interface Product {
   id: string;
@@ -134,12 +143,21 @@ export default function LanchoneteEstoque() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="category">Categoria</Label>
-                    <Input
-                      id="category"
-                      placeholder="Ex: Bebidas, Salgados, Lanches"
+                    <Select
                       value={newProduct.category}
-                      onChange={(e) => setNewProduct((prev) => ({ ...prev, category: e.target.value }))}
-                    />
+                      onValueChange={(value) => setNewProduct((prev) => ({ ...prev, category: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione uma categoria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {cat}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="price">Preço (R$)</Label>
