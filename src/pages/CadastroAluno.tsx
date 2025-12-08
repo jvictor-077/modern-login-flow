@@ -241,7 +241,7 @@ const CadastroAluno = () => {
                   <AccordionTrigger className="py-3 hover:no-underline">
                     <span className="flex items-center gap-2 text-sm font-medium">
                       <FileText className="h-4 w-4 text-primary" />
-                      Dados Pessoais (opcional)
+                      Dados Pessoais
                     </span>
                   </AccordionTrigger>
                   <AccordionContent className="pb-4">
@@ -311,7 +311,7 @@ const CadastroAluno = () => {
                   <AccordionTrigger className="py-3 hover:no-underline">
                     <span className="flex items-center gap-2 text-sm font-medium">
                       <Heart className="h-4 w-4 text-primary" />
-                      Informações de Saúde (opcional)
+                      Informações de Saúde
                     </span>
                   </AccordionTrigger>
                   <AccordionContent className="pb-4">
@@ -413,8 +413,8 @@ const CadastroAluno = () => {
                 <AccordionItem value="obs" className="border rounded-lg px-4">
                   <AccordionTrigger className="py-3 hover:no-underline">
                     <span className="flex items-center gap-2 text-sm font-medium">
-                      <Phone className="h-4 w-4 text-primary" />
-                      Observações e Autorizações (opcional)
+                      <FileText className="h-4 w-4 text-primary" />
+                      Observações (opcional)
                     </span>
                   </AccordionTrigger>
                   <AccordionContent className="pb-4 space-y-3">
