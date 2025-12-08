@@ -206,55 +206,43 @@ const CadastroAluno = () => {
     setIsSubmitting(true);
 
     try {
-      // Sanitize all text inputs before submission
-      const sanitizedData = {
-        nome: sanitizeText(validationResult.data.nome),
-        email: validationResult.data.email.toLowerCase().trim(),
-        cpf: formData.cpf ? formData.cpf.replace(/\D/g, '') : null,
-        celular: formData.celular ? formData.celular.replace(/\D/g, '') : null,
-        data_nascimento: formData.dataNascimento || null,
-        endereco: formData.endereco ? sanitizeText(formData.endereco) : null,
-        contato_emergencia: formData.contatoEmergencia ? sanitizeText(formData.contatoEmergencia) : null,
-        tipo_sanguineo: formData.tipoSanguineo || null,
-        doencas: formData.doencas ? sanitizeText(formData.doencas) : null,
-        alergias: formData.alergias ? sanitizeText(formData.alergias) : null,
-        autoriza_imagem: formData.autorizacaoImagem,
-        observacoes: formData.observacoes ? sanitizeText(formData.observacoes) : null,
-        situacao: "pendente" as const,
-      };
-
-      const { data: alunoData, error: alunoError } = await supabase
-        .from("alunos")
-        .insert(sanitizedData)
-        .select("id")
-        .single();
-
-      if (alunoError) {
-        if (alunoError.code === "23505") {
-          toast.error("Este email já está cadastrado");
-        } else {
-          toast.error("Erro ao enviar cadastro. Tente novamente.");
-        }
-        return;
-      }
-
-      const modalidadesInsert = modalidadesSelecionadas.map(m => {
+      // Prepare modalidades with server-defined prices (prevent manipulation)
+      const modalidadesData = modalidadesSelecionadas.map(m => {
         const planoInfo = getPlanosModalidade(m.modalidade).find(p => p.nome === m.plano);
         return {
-          aluno_id: alunoData.id,
-          modalidade: sanitizeText(m.modalidade),
-          plano: sanitizeText(m.plano),
+          modalidade: m.modalidade,
+          plano: m.plano,
           valor: planoInfo?.valor || 0,
         };
       });
 
-      const { error: modalidadesError } = await supabase
-        .from("aluno_modalidades")
-        .insert(modalidadesInsert);
+      // Use the secure SECURITY DEFINER function for registration
+      // This bypasses RLS and validates all inputs server-side
+      const { data, error } = await supabase.rpc('register_aluno', {
+        p_nome: sanitizeText(validationResult.data.nome),
+        p_email: validationResult.data.email.toLowerCase().trim(),
+        p_cpf: formData.cpf ? formData.cpf.replace(/\D/g, '') : null,
+        p_celular: formData.celular ? formData.celular.replace(/\D/g, '') : null,
+        p_data_nascimento: formData.dataNascimento || null,
+        p_endereco: formData.endereco ? sanitizeText(formData.endereco) : null,
+        p_contato_emergencia: formData.contatoEmergencia ? sanitizeText(formData.contatoEmergencia) : null,
+        p_tipo_sanguineo: formData.tipoSanguineo || null,
+        p_doencas: formData.doencas ? sanitizeText(formData.doencas) : null,
+        p_alergias: formData.alergias ? sanitizeText(formData.alergias) : null,
+        p_observacoes: formData.observacoes ? sanitizeText(formData.observacoes) : null,
+        p_autoriza_imagem: formData.autorizacaoImagem,
+        p_modalidades: modalidadesData,
+      });
 
-      if (modalidadesError) {
-        // Log without exposing details to user
-        console.error("Registration error occurred");
+      if (error) {
+        if (error.message.includes('duplicate') || error.message.includes('23505')) {
+          toast.error("Este email já está cadastrado");
+        } else if (error.message.includes('inválido') || error.message.includes('inválida')) {
+          toast.error(error.message);
+        } else {
+          toast.error("Erro ao enviar cadastro. Tente novamente.");
+        }
+        return;
       }
 
       toast.success("Cadastro enviado com sucesso!", {
