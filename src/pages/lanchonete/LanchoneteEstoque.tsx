@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -63,7 +63,7 @@ export default function LanchoneteEstoque() {
   };
 
   const handleAddProduct = () => {
-    if (!newProduct.name.trim() || !newProduct.price || !newProduct.quantity) {
+    if (!newProduct.name.trim() || !newProduct.price || !newProduct.quantity || !newProduct.category) {
       toast({
         title: "Campos obrigatórios",
         description: "Preencha todos os campos para adicionar o produto.",
@@ -77,7 +77,7 @@ export default function LanchoneteEstoque() {
       name: newProduct.name.trim(),
       price: parseFloat(newProduct.price.replace(",", ".")),
       quantity: parseInt(newProduct.quantity),
-      category: newProduct.category || "Outros",
+      category: newProduct.category,
     };
 
     setProducts((prev) => [...prev, product]);
@@ -94,7 +94,6 @@ export default function LanchoneteEstoque() {
     0
   );
 
-  // Group products by category
   const groupedProducts = products.reduce((acc, product) => {
     if (!acc[product.category]) {
       acc[product.category] = [];
@@ -103,169 +102,159 @@ export default function LanchoneteEstoque() {
     return acc;
   }, {} as Record<string, Product[]>);
 
+  const actions = (
+    <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+      <DialogTrigger asChild>
+        <Button className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
+          <PlusCircle className="h-5 w-5" />
+          <span className="hidden sm:inline">Adicionar Produto</span>
+          <span className="sm:hidden">Adicionar</span>
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Adicionar Novo Produto</DialogTitle>
+          <DialogDescription>Preencha os dados do produto</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Nome do Produto</Label>
+            <Input
+              id="name"
+              placeholder="Ex: Refrigerante Lata"
+              value={newProduct.name}
+              onChange={(e) => setNewProduct((prev) => ({ ...prev, name: e.target.value }))}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="category">Categoria</Label>
+            <Select
+              value={newProduct.category}
+              onValueChange={(value) => setNewProduct((prev) => ({ ...prev, category: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="price">Preço (R$)</Label>
+            <Input
+              id="price"
+              placeholder="Ex: 8,90"
+              value={newProduct.price}
+              onChange={(e) => setNewProduct((prev) => ({ ...prev, price: e.target.value }))}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="quantity">Quantidade Inicial</Label>
+            <Input
+              id="quantity"
+              type="number"
+              placeholder="Ex: 20"
+              value={newProduct.quantity}
+              onChange={(e) => setNewProduct((prev) => ({ ...prev, quantity: e.target.value }))}
+            />
+          </div>
+          <Button onClick={handleAddProduct} className="w-full mt-4">
+            Adicionar Produto
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
-        <AdminSidebar />
+    <AdminLayout
+      title="Estoque Lanchonete"
+      description="Gerencie os produtos da lanchonete"
+      actions={actions}
+    >
+      {/* Products by Category */}
+      <div className="space-y-4 sm:space-y-6">
+        {Object.entries(groupedProducts).map(([category, categoryProducts]) => (
+          <Card key={category} className="border-border/50 bg-card/50 backdrop-blur-sm">
+            <CardHeader className="border-b border-border/50 py-3 sm:py-4">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg font-semibold">
+                <Package className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                {category}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y divide-border/50">
+                {categoryProducts.map((product) => (
+                  <div
+                    key={product.id}
+                    className="flex items-center justify-between p-3 sm:p-4 hover:bg-muted/30 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0 mr-2">
+                      <h3 className="font-medium text-foreground truncate text-sm sm:text-base">
+                        {product.name}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
+                        R$ {product.price.toFixed(2).replace(".", ",")} / unidade
+                      </p>
+                    </div>
 
-        <main className="flex-1 p-6 lg:p-8 overflow-auto">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-            <div>
-              <h1 className="text-2xl lg:text-3xl font-display font-bold text-foreground">
-                Estoque Lanchonete
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                Gerencie os produtos da lanchonete
-              </p>
-            </div>
-
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
-                  <PlusCircle className="h-5 w-5" />
-                  Adicionar Produto
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Adicionar Novo Produto</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Nome do Produto</Label>
-                    <Input
-                      id="name"
-                      placeholder="Ex: Refrigerante Lata"
-                      value={newProduct.name}
-                      onChange={(e) => setNewProduct((prev) => ({ ...prev, name: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="category">Categoria</Label>
-                    <Select
-                      value={newProduct.category}
-                      onValueChange={(value) => setNewProduct((prev) => ({ ...prev, category: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione uma categoria" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((cat) => (
-                          <SelectItem key={cat} value={cat}>
-                            {cat}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="price">Preço (R$)</Label>
-                    <Input
-                      id="price"
-                      placeholder="Ex: 8,90"
-                      value={newProduct.price}
-                      onChange={(e) => setNewProduct((prev) => ({ ...prev, price: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="quantity">Quantidade Inicial</Label>
-                    <Input
-                      id="quantity"
-                      type="number"
-                      placeholder="Ex: 20"
-                      value={newProduct.quantity}
-                      onChange={(e) => setNewProduct((prev) => ({ ...prev, quantity: e.target.value }))}
-                    />
-                  </div>
-                  <Button onClick={handleAddProduct} className="w-full mt-4">
-                    Adicionar Produto
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          {/* Products by Category */}
-          <div className="space-y-6">
-            {Object.entries(groupedProducts).map(([category, categoryProducts]) => (
-              <Card key={category} className="border-border/50 bg-card/50 backdrop-blur-sm">
-                <CardHeader className="border-b border-border/50">
-                  <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                    <Package className="h-5 w-5 text-primary" />
-                    {category}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="divide-y divide-border/50">
-                    {categoryProducts.map((product) => (
-                      <div
-                        key={product.id}
-                        className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7 sm:h-8 sm:w-8 border-border/50 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50"
+                        onClick={() => handleQuantityChange(product.id, -1)}
                       >
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-medium text-foreground truncate">
-                            {product.name}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">
-                            R$ {product.price.toFixed(2).replace(".", ",")} / unidade
-                          </p>
-                        </div>
+                        <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
+                      </Button>
 
-                        <div className="flex items-center gap-3 ml-4">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8 border-border/50 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50"
-                            onClick={() => handleQuantityChange(product.id, -1)}
-                          >
-                            <Minus className="h-4 w-4" />
-                          </Button>
+                      <span className={`w-8 sm:w-12 text-center font-semibold tabular-nums text-sm sm:text-base ${
+                        product.quantity <= 5 ? "text-destructive" : "text-foreground"
+                      }`}>
+                        {product.quantity}
+                      </span>
 
-                          <span className={`w-12 text-center font-semibold tabular-nums ${
-                            product.quantity <= 5 ? "text-destructive" : "text-foreground"
-                          }`}>
-                            {product.quantity}
-                          </span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7 sm:h-8 sm:w-8 border-border/50 hover:bg-accent/50 hover:text-accent-foreground hover:border-accent/50"
+                        onClick={() => handleQuantityChange(product.id, 1)}
+                      >
+                        <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+                      </Button>
 
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8 border-border/50 hover:bg-accent/50 hover:text-accent-foreground hover:border-accent/50"
-                            onClick={() => handleQuantityChange(product.id, 1)}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-
-                          <div className="w-24 text-right">
-                            <span className="font-medium text-foreground">
-                              R$ {(product.price * product.quantity).toFixed(2).replace(".", ",")}
-                            </span>
-                          </div>
-                        </div>
+                      <div className="w-16 sm:w-24 text-right">
+                        <span className="font-medium text-foreground text-sm sm:text-base">
+                          R$ {(product.price * product.quantity).toFixed(2).replace(".", ",")}
+                        </span>
                       </div>
-                    ))}
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* Total */}
-          <Card className="mt-6 border-primary/30 bg-primary/5">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-lg font-semibold text-foreground">
-                  Valor Total do Estoque
-                </span>
-                <span className="text-2xl font-bold text-primary">
-                  R$ {totalValue.toFixed(2).replace(".", ",")}
-                </span>
+                ))}
               </div>
             </CardContent>
           </Card>
-        </main>
+        ))}
       </div>
-    </SidebarProvider>
+
+      {/* Total */}
+      <Card className="mt-4 sm:mt-6 border-primary/30 bg-primary/5">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex items-center justify-between">
+            <span className="text-base sm:text-lg font-semibold text-foreground">
+              Valor Total
+            </span>
+            <span className="text-xl sm:text-2xl font-bold text-primary">
+              R$ {totalValue.toFixed(2).replace(".", ",")}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+    </AdminLayout>
   );
 }
