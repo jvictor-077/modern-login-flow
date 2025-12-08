@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import CadastroAluno from "./pages/CadastroAluno";
-import AlunoHome from "./pages/AlunoHome";
 import AdminDashboard from "./pages/AdminDashboard";
 import Estoque from "./pages/Estoque";
 import Mensalidades from "./pages/Mensalidades";
@@ -14,6 +13,11 @@ import LanchonetePedidos from "./pages/lanchonete/LanchonetePedidos";
 import LanchoneteEstoque from "./pages/lanchonete/LanchoneteEstoque";
 import LanchonetePreparos from "./pages/lanchonete/LanchonetePreparos";
 import NotFound from "./pages/NotFound";
+
+// Aluno pages with layout
+import { AlunoLayout } from "./components/aluno/AlunoLayout";
+import AlunoHomeContent from "./pages/aluno/AlunoHomeContent";
+import ReservarHorario from "./pages/aluno/ReservarHorario";
 
 const queryClient = new QueryClient();
 
@@ -26,7 +30,11 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/cadastro" element={<CadastroAluno />} />
-          <Route path="/aluno" element={<AlunoHome />} />
+          
+          {/* Aluno routes with sidebar layout */}
+          <Route path="/aluno" element={<AlunoLayout><AlunoHomeContent /></AlunoLayout>} />
+          <Route path="/aluno/reservar" element={<AlunoLayout><ReservarHorario /></AlunoLayout>} />
+          
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/estoque" element={<Estoque />} />
           <Route path="/admin/mensalidades" element={<Mensalidades />} />
