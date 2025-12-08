@@ -13,7 +13,8 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 const menuItems = [
   {
@@ -39,6 +40,14 @@ const menuItems = [
 ];
 
 export function AlunoSidebar() {
+  const { signOut, user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/');
+  };
+
   return (
     <Sidebar className="border-r border-sidebar-border">
       <SidebarHeader className="border-b border-sidebar-border p-4">
@@ -80,15 +89,19 @@ export function AlunoSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-4">
-        <Link to="/">
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-muted-foreground hover:text-destructive"
-          >
-            <LogOut className="mr-2 h-5 w-5" />
-            Sair
-          </Button>
-        </Link>
+        {user && (
+          <p className="text-xs text-muted-foreground mb-2 truncate">
+            {user.email}
+          </p>
+        )}
+        <Button
+          variant="ghost"
+          className="w-full justify-start text-muted-foreground hover:text-destructive"
+          onClick={handleLogout}
+        >
+          <LogOut className="mr-2 h-5 w-5" />
+          Sair
+        </Button>
       </SidebarFooter>
     </Sidebar>
   );
