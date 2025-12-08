@@ -68,32 +68,33 @@ const MinhasReservas = () => {
   const getStatusBadge = (status: Reserva["status"]) => {
     if (status === "confirmada") {
       return (
-        <Badge className="bg-accent/20 text-accent border-accent/30">
-          <CalendarCheck className="h-3 w-3 mr-1" />
+        <Badge className="bg-accent/20 text-accent border-accent/30 text-[10px] sm:text-xs">
+          <CalendarCheck className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1" />
           Confirmada
         </Badge>
       );
     }
     return (
-      <Badge variant="secondary">
+      <Badge variant="secondary" className="text-[10px] sm:text-xs">
         Concluída
       </Badge>
     );
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-2xl font-display font-bold">Minhas Reservas</h1>
-        <p className="text-muted-foreground">Visualize e gerencie suas reservas de horário</p>
+        <h1 className="text-xl sm:text-2xl font-display font-bold">Minhas Reservas</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">Visualize suas reservas de horário</p>
       </div>
 
       {/* Filtros */}
-      <div className="flex gap-2">
+      <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0">
         <Button
           variant={filtro === "todas" ? "default" : "outline"}
           size="sm"
           onClick={() => setFiltro("todas")}
+          className="text-xs sm:text-sm h-8 sm:h-9 shrink-0"
         >
           Todas
         </Button>
@@ -101,6 +102,7 @@ const MinhasReservas = () => {
           variant={filtro === "confirmada" ? "default" : "outline"}
           size="sm"
           onClick={() => setFiltro("confirmada")}
+          className="text-xs sm:text-sm h-8 sm:h-9 shrink-0"
         >
           Confirmadas
         </Button>
@@ -108,6 +110,7 @@ const MinhasReservas = () => {
           variant={filtro === "concluida" ? "default" : "outline"}
           size="sm"
           onClick={() => setFiltro("concluida")}
+          className="text-xs sm:text-sm h-8 sm:h-9 shrink-0"
         >
           Concluídas
         </Button>
@@ -115,44 +118,41 @@ const MinhasReservas = () => {
 
       {/* Lista de Reservas */}
       {reservasFiltradas.length > 0 ? (
-        <div className="grid gap-4">
+        <div className="grid gap-3 sm:gap-4">
           {reservasFiltradas.map((reserva) => (
             <Card key={reserva.id} className={reserva.status === "concluida" ? "opacity-70" : ""}>
-              <CardContent className="p-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex items-start gap-4">
-                    <div className="w-14 h-14 rounded-xl bg-primary/10 flex flex-col items-center justify-center">
-                      <span className="text-lg font-bold text-primary">
-                        {format(reserva.data, "dd")}
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg sm:rounded-xl bg-primary/10 flex flex-col items-center justify-center shrink-0">
+                    <span className="text-base sm:text-lg font-bold text-primary">
+                      {format(reserva.data, "dd")}
+                    </span>
+                    <span className="text-[10px] sm:text-xs text-muted-foreground uppercase">
+                      {format(reserva.data, "MMM", { locale: ptBR })}
+                    </span>
+                  </div>
+                  
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                      <span className="font-medium text-sm sm:text-base capitalize truncate">
+                        {format(reserva.data, "EEEE", { locale: ptBR })}
                       </span>
-                      <span className="text-xs text-muted-foreground uppercase">
-                        {format(reserva.data, "MMM", { locale: ptBR })}
+                      {getStatusBadge(reserva.status)}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+                        {reserva.horaInicio} - {reserva.horaFim}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3 sm:h-4 sm:w-4" />
+                        {reserva.quadra}
                       </span>
                     </div>
-                    
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">
-                          {format(reserva.data, "EEEE", { locale: ptBR })}
-                        </span>
-                        {getStatusBadge(reserva.status)}
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          {reserva.horaInicio} às {reserva.horaFim}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <MapPin className="h-4 w-4" />
-                          {reserva.quadra}
-                        </span>
-                      </div>
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">Duração: </span>
-                        <span className="font-medium">{reserva.duracao}h</span>
-                        <span className="mx-2">•</span>
-                        <span className="text-primary font-bold">R$ {reserva.valor},00</span>
-                      </div>
+                    <div className="text-xs sm:text-sm">
+                      <span className="text-muted-foreground">{reserva.duracao}h</span>
+                      <span className="mx-1.5 sm:mx-2">•</span>
+                      <span className="text-primary font-bold">R$ {reserva.valor},00</span>
                     </div>
                   </div>
                 </div>
@@ -162,15 +162,15 @@ const MinhasReservas = () => {
         </div>
       ) : (
         <Card>
-          <CardContent className="py-12 text-center">
-            <Calendar className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-            <p className="text-muted-foreground">
+          <CardContent className="py-10 sm:py-12 text-center">
+            <Calendar className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-muted-foreground/50 mb-3 sm:mb-4" />
+            <p className="text-sm sm:text-base text-muted-foreground">
               {filtro === "todas" 
                 ? "Você ainda não possui reservas"
                 : `Nenhuma reserva ${filtro === "confirmada" ? "confirmada" : "concluída"}`
               }
             </p>
-            <Button variant="link" className="mt-2" asChild>
+            <Button variant="link" className="mt-2 text-sm" asChild>
               <a href="/aluno/reservar">Fazer uma reserva</a>
             </Button>
           </CardContent>
