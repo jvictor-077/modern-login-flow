@@ -1,4 +1,4 @@
-import { LayoutDashboard, Calendar, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Package, LogOut } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
   Sidebar,
@@ -15,8 +15,7 @@ import {
 
 const menuItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
-  { title: "Calendário", url: "/admin/calendario", icon: Calendar },
-  { title: "Configurações", url: "/admin/configuracoes", icon: Settings },
+  { title: "Estoque", url: "/admin/estoque", icon: Package },
 ];
 
 export function AdminSidebar() {
