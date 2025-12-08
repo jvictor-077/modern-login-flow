@@ -3,7 +3,16 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScanLine, Plus, Minus, Package } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { ScanLine, Plus, Minus, Package, PlusCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface Product {
@@ -26,6 +35,8 @@ const initialProducts: Product[] = [
 
 export default function Estoque() {
   const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newProduct, setNewProduct] = useState({ name: "", price: "", quantity: "" });
 
   const handleQuantityChange = (id: string, delta: number) => {
     setProducts((prev) =>
@@ -43,6 +54,32 @@ export default function Estoque() {
     toast({
       title: "Escanear Nota Fiscal",
       description: "Funcionalidade de escaneamento será implementada em breve.",
+    });
+  };
+
+  const handleAddProduct = () => {
+    if (!newProduct.name.trim() || !newProduct.price || !newProduct.quantity) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Preencha todos os campos para adicionar o produto.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const product: Product = {
+      id: Date.now().toString(),
+      name: newProduct.name.trim(),
+      price: parseFloat(newProduct.price.replace(",", ".")),
+      quantity: parseInt(newProduct.quantity),
+    };
+
+    setProducts((prev) => [...prev, product]);
+    setNewProduct({ name: "", price: "", quantity: "" });
+    setIsAddDialogOpen(false);
+    toast({
+      title: "Produto adicionado",
+      description: `${product.name} foi adicionado ao estoque.`,
     });
   };
 
@@ -68,13 +105,62 @@ export default function Estoque() {
               </p>
             </div>
 
-            <Button
-              onClick={handleScanInvoice}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
-            >
-              <ScanLine className="h-5 w-5" />
-              Escanear Nota Fiscal
-            </Button>
+            <div className="flex gap-3">
+              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="gap-2 border-primary/50 text-primary hover:bg-primary/10">
+                    <PlusCircle className="h-5 w-5" />
+                    Adicionar Item
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Adicionar Novo Produto</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Nome do Produto</Label>
+                      <Input
+                        id="name"
+                        placeholder="Ex: Bola de Vôlei"
+                        value={newProduct.name}
+                        onChange={(e) => setNewProduct((prev) => ({ ...prev, name: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="price">Preço (R$)</Label>
+                      <Input
+                        id="price"
+                        placeholder="Ex: 89,90"
+                        value={newProduct.price}
+                        onChange={(e) => setNewProduct((prev) => ({ ...prev, price: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="quantity">Quantidade Inicial</Label>
+                      <Input
+                        id="quantity"
+                        type="number"
+                        placeholder="Ex: 10"
+                        value={newProduct.quantity}
+                        onChange={(e) => setNewProduct((prev) => ({ ...prev, quantity: e.target.value }))}
+                      />
+                    </div>
+                    <Button onClick={handleAddProduct} className="w-full mt-4">
+                      Adicionar Produto
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Button
+                onClick={handleScanInvoice}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+              >
+                <ScanLine className="h-5 w-5" />
+                Escanear Nota Fiscal
+              </Button>
+            </div>
           </div>
 
           {/* Products List */}
