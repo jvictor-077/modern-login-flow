@@ -12,6 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -29,7 +30,7 @@ import {
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Search, UserPlus } from "lucide-react";
+import { Plus, Search, UserPlus, Phone, User, CreditCard, MapPin, Heart, Calendar } from "lucide-react";
 import { toast } from "sonner";
 
 interface Modalidade {
@@ -134,6 +135,13 @@ export default function Mensalidades() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [novoAluno, setNovoAluno] = useState(emptyNovoAluno);
+  const [selectedAluno, setSelectedAluno] = useState<Aluno | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  const handleAlunoClick = (aluno: Aluno) => {
+    setSelectedAluno(aluno);
+    setIsDetailModalOpen(true);
+  };
 
   const filteredAlunos = alunos.filter((aluno) =>
     aluno.nome.toLowerCase().includes(searchTerm.toLowerCase())
@@ -525,7 +533,11 @@ export default function Mensalidades() {
             </TableHeader>
             <TableBody>
               {filteredAlunos.map((aluno) => (
-                <TableRow key={aluno.id} className="border-border/50">
+                <TableRow 
+                  key={aluno.id} 
+                  className="border-border/50 cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleAlunoClick(aluno)}
+                >
                   <TableCell className="font-medium">{aluno.nome}</TableCell>
                   <TableCell className="text-muted-foreground hidden md:table-cell">{aluno.celular}</TableCell>
                   <TableCell className="hidden md:table-cell">
@@ -543,6 +555,194 @@ export default function Mensalidades() {
             </TableBody>
           </Table>
         </div>
+
+        {/* Modal de Detalhes do Aluno */}
+        <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
+          <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] p-4 sm:p-6">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                {selectedAluno?.nome}
+              </DialogTitle>
+            </DialogHeader>
+            {selectedAluno && (
+              <Tabs defaultValue="mensalidades" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="mensalidades" className="text-xs sm:text-sm">
+                    <CreditCard className="h-4 w-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Mensalidades</span>
+                    <span className="sm:hidden">Mensalid.</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="contato" className="text-xs sm:text-sm">
+                    <Phone className="h-4 w-4 mr-1 sm:mr-2" />
+                    Contato
+                  </TabsTrigger>
+                  <TabsTrigger value="pessoal" className="text-xs sm:text-sm">
+                    <User className="h-4 w-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Info. Pessoais</span>
+                    <span className="sm:hidden">Pessoal</span>
+                  </TabsTrigger>
+                </TabsList>
+
+                <ScrollArea className="max-h-[60vh] mt-4">
+                  {/* Aba Mensalidades */}
+                  <TabsContent value="mensalidades" className="space-y-4">
+                    <div className="flex items-center justify-between p-4 rounded-lg bg-muted/30 border border-border/50">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Situação Atual</p>
+                        <div className="mt-1">{getSituacaoBadge(selectedAluno.situacao)}</div>
+                      </div>
+                      <Select
+                        value={selectedAluno.situacao}
+                        onValueChange={(value: Aluno["situacao"]) => {
+                          updateSituacao(selectedAluno.id, value);
+                          setSelectedAluno({ ...selectedAluno, situacao: value });
+                        }}
+                      >
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover">
+                          <SelectItem value="em_dia">Em dia</SelectItem>
+                          <SelectItem value="pendente">Pendente</SelectItem>
+                          <SelectItem value="atrasado">Atrasado</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                        Modalidades Matriculadas
+                      </h4>
+                      {selectedAluno.modalidades.length > 0 ? (
+                        <div className="space-y-2">
+                          {selectedAluno.modalidades.map((mod) => (
+                            <div
+                              key={mod.nome}
+                              className="flex justify-between items-center p-3 rounded-lg bg-muted/20 border border-border/30"
+                            >
+                              <span className="font-medium">{mod.nome}</span>
+                              <Badge variant="outline">{mod.plano}</Badge>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground text-sm">Nenhuma modalidade cadastrada</p>
+                      )}
+                    </div>
+                  </TabsContent>
+
+                  {/* Aba Contato */}
+                  <TabsContent value="contato" className="space-y-4">
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/20 border border-border/30">
+                        <Phone className="h-5 w-5 text-primary mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Celular (WhatsApp)</p>
+                          <p className="font-medium">{selectedAluno.celular}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/20 border border-border/30">
+                        <User className="h-5 w-5 text-primary mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">E-mail</p>
+                          <p className="font-medium">{selectedAluno.email}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/20 border border-border/30">
+                        <MapPin className="h-5 w-5 text-primary mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Endereço</p>
+                          <p className="font-medium">{selectedAluno.endereco || "Não informado"}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/20 border border-border/30">
+                        <Phone className="h-5 w-5 text-red-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Contato de Emergência</p>
+                          <p className="font-medium">{selectedAluno.contatoEmergencia}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  {/* Aba Informações Pessoais */}
+                  <TabsContent value="pessoal" className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/20 border border-border/30">
+                        <User className="h-5 w-5 text-primary mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">CPF</p>
+                          <p className="font-medium">{selectedAluno.cpf}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/20 border border-border/30">
+                        <Calendar className="h-5 w-5 text-primary mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Data de Nascimento</p>
+                          <p className="font-medium">
+                            {new Date(selectedAluno.dataNascimento).toLocaleDateString("pt-BR")}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/20 border border-border/30">
+                        <Heart className="h-5 w-5 text-red-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Tipo Sanguíneo</p>
+                          <p className="font-medium">{selectedAluno.tipoSanguineo}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/20 border border-border/30">
+                        <User className="h-5 w-5 text-primary mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Autoriza Imagem</p>
+                          <p className="font-medium">{selectedAluno.autorizaImagem ? "Sim" : "Não"}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {(selectedAluno.doencas || selectedAluno.alergias) && (
+                      <div className="space-y-3">
+                        <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                          Informações de Saúde
+                        </h4>
+                        {selectedAluno.doencas && (
+                          <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                            <p className="text-sm text-muted-foreground">Doenças/Lesões</p>
+                            <p className="font-medium">{selectedAluno.doencas}</p>
+                          </div>
+                        )}
+                        {selectedAluno.alergias && (
+                          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                            <p className="text-sm text-muted-foreground">Alergias</p>
+                            <p className="font-medium">{selectedAluno.alergias}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {selectedAluno.observacoes && (
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                          Observações
+                        </h4>
+                        <p className="p-3 rounded-lg bg-muted/20 border border-border/30">
+                          {selectedAluno.observacoes}
+                        </p>
+                      </div>
+                    )}
+                  </TabsContent>
+                </ScrollArea>
+              </Tabs>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Resumo */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
