@@ -236,7 +236,7 @@ export default function Mensalidades() {
                 Novo Aluno
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-2xl max-h-[90vh]">
+            <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] p-4 sm:p-6">
               <DialogHeader>
                 <DialogTitle>Cadastrar Novo Aluno</DialogTitle>
               </DialogHeader>
@@ -402,7 +402,8 @@ export default function Mensalidades() {
                     <p className="text-xs text-muted-foreground">
                       Obs: você pode selecionar mais de 1 modalidade.
                     </p>
-                    <div className="overflow-x-auto">
+                    {/* Desktop: Table layout */}
+                    <div className="hidden sm:block overflow-x-auto">
                       <table className="w-full text-sm border border-border/50 rounded-lg">
                         <thead>
                           <tr className="border-b border-border/50 bg-muted/30">
@@ -435,6 +436,31 @@ export default function Mensalidades() {
                           ))}
                         </tbody>
                       </table>
+                    </div>
+                    
+                    {/* Mobile: Card layout */}
+                    <div className="sm:hidden space-y-4">
+                      {modalidadesDisponiveis.map((modalidade) => (
+                        <div key={modalidade} className="border border-border/50 rounded-lg p-3 space-y-2">
+                          <p className="font-medium text-sm">{modalidade}</p>
+                          <Select
+                            value={novoAluno.modalidades[modalidade] || ""}
+                            onValueChange={(value) => handleModalidadeChange(modalidade, value)}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Selecione um plano" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-popover">
+                              <SelectItem value="">Nenhum</SelectItem>
+                              {planosDisponiveis.map((plano) => (
+                                <SelectItem key={plano} value={plano}>
+                                  {plano}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
@@ -492,8 +518,8 @@ export default function Mensalidades() {
             <TableHeader>
               <TableRow className="hover:bg-transparent border-border/50">
                 <TableHead className="text-muted-foreground">Nome</TableHead>
-                <TableHead className="text-muted-foreground">Celular</TableHead>
-                <TableHead className="text-muted-foreground">Modalidades</TableHead>
+                <TableHead className="text-muted-foreground hidden md:table-cell">Celular</TableHead>
+                <TableHead className="text-muted-foreground hidden md:table-cell">Modalidades</TableHead>
                 <TableHead className="text-muted-foreground">Situação</TableHead>
               </TableRow>
             </TableHeader>
@@ -501,8 +527,8 @@ export default function Mensalidades() {
               {filteredAlunos.map((aluno) => (
                 <TableRow key={aluno.id} className="border-border/50">
                   <TableCell className="font-medium">{aluno.nome}</TableCell>
-                  <TableCell className="text-muted-foreground">{aluno.celular}</TableCell>
-                  <TableCell>
+                  <TableCell className="text-muted-foreground hidden md:table-cell">{aluno.celular}</TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <div className="flex flex-wrap gap-1">
                       {aluno.modalidades.map((mod) => (
                         <Badge key={mod.nome} variant="outline" className="text-xs">
