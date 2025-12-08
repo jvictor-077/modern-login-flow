@@ -47,7 +47,7 @@ export function AlunoSidebar() {
             <span className="text-xl">🏐</span>
           </div>
           <span className="font-display font-bold text-lg text-sidebar-foreground">
-            QuadraPro
+            Sunset
           </span>
         </div>
       </SidebarHeader>

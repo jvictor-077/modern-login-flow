@@ -22,7 +22,7 @@ const Index = () => {
               <span className="text-3xl">🏐</span>
             </div>
             <div>
-              <span className="text-2xl font-display font-bold">QuadraPro</span>
+              <span className="text-2xl font-display font-bold">Sunset</span>
               <p className="text-xs text-muted-foreground">Sistema de Reservas</p>
             </div>
           </div>
@@ -81,7 +81,7 @@ const Index = () => {
               <span className="text-2xl">🏐</span>
             </div>
             <div>
-              <span className="text-xl font-display font-bold">QuadraPro</span>
+              <span className="text-xl font-display font-bold">Sunset</span>
               <p className="text-xs text-muted-foreground">Sistema de Reservas</p>
             </div>
           </div>

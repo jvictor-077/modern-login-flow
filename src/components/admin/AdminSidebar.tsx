@@ -35,7 +35,7 @@ export function AdminSidebar() {
             <span className="text-xl">🎾</span>
           </div>
           <div>
-            <h2 className="font-display font-bold text-foreground">QuadraPro</h2>
+            <h2 className="font-display font-bold text-foreground">Sunset</h2>
             <p className="text-xs text-muted-foreground">Painel Administrativo</p>
           </div>
         </div>
