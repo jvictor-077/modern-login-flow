@@ -1,4 +1,4 @@
-import { LayoutDashboard, Package, LogOut, UtensilsCrossed, ClipboardList, BarChart3, Boxes, ChefHat } from "lucide-react";
+import { LayoutDashboard, Package, LogOut, UtensilsCrossed, ClipboardList, BarChart3, Boxes, ChefHat, CreditCard } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
   Sidebar,
@@ -16,6 +16,7 @@ import {
 const menuItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
   { title: "Estoque", url: "/admin/estoque", icon: Package },
+  { title: "Mensalidades", url: "/admin/mensalidades", icon: CreditCard },
 ];
 
 const lanchoneteItems = [
