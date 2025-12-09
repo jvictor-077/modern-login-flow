@@ -763,6 +763,189 @@ Atualiza perfil do usuário logado.
 
 ---
 
+## Estoque
+
+### GET /estoque
+Lista todos os produtos do estoque. **Requer role: admin**
+
+**Query Parameters:**
+| Param | Type | Description |
+|-------|------|-------------|
+| categoria | string | Filtrar por categoria |
+| is_active | boolean | Filtrar por status ativo |
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "nome": "Raquete Beach Tennis Pro",
+      "categoria": "equipamentos",
+      "quantidade": 15,
+      "preco": 450.00,
+      "is_active": true,
+      "created_at": "2024-01-20T10:00:00Z"
+    }
+  ]
+}
+```
+
+### POST /estoque
+Adiciona novo produto ao estoque. **Requer role: admin**
+
+**Request Body:**
+```json
+{
+  "nome": "Bola de Beach Tennis",
+  "categoria": "materiais",
+  "quantidade": 100,
+  "preco": 25.00
+}
+```
+
+### PUT /estoque/:id
+Atualiza produto do estoque. **Requer role: admin**
+
+### DELETE /estoque/:id
+Remove produto do estoque. **Requer role: admin**
+
+---
+
+## Lanchonete
+
+### GET /lanchonete/produtos
+Lista produtos da lanchonete. **Requer role: admin ou lanchonete**
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "nome": "Água Mineral 500ml",
+      "categoria": "bebidas",
+      "preco": 5.00,
+      "quantidade": 50,
+      "is_active": true
+    }
+  ]
+}
+```
+
+### POST /lanchonete/produtos
+Adiciona produto à lanchonete. **Requer role: admin ou lanchonete**
+
+### PUT /lanchonete/produtos/:id
+Atualiza produto da lanchonete. **Requer role: admin ou lanchonete**
+
+### GET /lanchonete/pedidos
+Lista pedidos da lanchonete. **Requer role: admin ou lanchonete**
+
+**Query Parameters:**
+| Param | Type | Description |
+|-------|------|-------------|
+| status | string | pendente, preparando, pronto, entregue, cancelado |
+| data | date | Filtrar por data (YYYY-MM-DD) |
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "cliente_nome": "João Silva",
+      "status": "preparando",
+      "total": 25.00,
+      "observacoes": "Sem gelo",
+      "itens": [
+        {
+          "produto_id": "uuid",
+          "produto_nome": "Água Mineral",
+          "quantidade": 2,
+          "preco_unitario": 5.00
+        }
+      ],
+      "created_at": "2024-01-20T14:30:00Z"
+    }
+  ]
+}
+```
+
+### POST /lanchonete/pedidos
+Cria novo pedido. **Requer role: admin ou lanchonete**
+
+**Request Body:**
+```json
+{
+  "cliente_nome": "Maria Santos",
+  "observacoes": "Entregar na quadra 1",
+  "itens": [
+    { "produto_id": "uuid", "quantidade": 2 }
+  ]
+}
+```
+
+### PUT /lanchonete/pedidos/:id/status
+Atualiza status do pedido. **Requer role: admin ou lanchonete**
+
+**Request Body:**
+```json
+{
+  "status": "pronto"
+}
+```
+
+### GET /lanchonete/itens-preparo
+Lista itens de preparo (ingredientes). **Requer role: admin ou lanchonete**
+
+### POST /lanchonete/itens-preparo
+Adiciona item de preparo. **Requer role: admin ou lanchonete**
+
+### PUT /lanchonete/itens-preparo/:id
+Atualiza item de preparo. **Requer role: admin ou lanchonete**
+
+---
+
+## Preços e Configurações
+
+### GET /precos/modalidades
+Lista preços das modalidades.
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "modalidade": "Beach Tennis",
+      "plano": "Mensal",
+      "valor": 350.00,
+      "descricao": "Aulas 3x por semana",
+      "is_active": true
+    }
+  ]
+}
+```
+
+### POST /precos/modalidades
+Adiciona preço de modalidade. **Requer role: admin**
+
+### PUT /precos/modalidades/:id
+Atualiza preço de modalidade. **Requer role: admin**
+
+### GET /precos/aulas-avulsas
+Lista preços de aulas avulsas.
+
+### POST /precos/aulas-avulsas
+Adiciona preço de aula avulsa. **Requer role: admin**
+
+---
+
 ## Códigos de Erro
 
 | Code | HTTP Status | Description |
@@ -771,7 +954,7 @@ Atualiza perfil do usuário logado.
 | UNAUTHORIZED | 401 | Token inválido ou expirado |
 | FORBIDDEN | 403 | Sem permissão para o recurso |
 | NOT_FOUND | 404 | Recurso não encontrado |
-| CONFLICT | 409 | Conflito (ex: email duplicado) |
+| CONFLICT | 409 | Conflito (ex: email duplicado, horário ocupado) |
 | INTERNAL_ERROR | 500 | Erro interno do servidor |
 
 ---
@@ -789,8 +972,15 @@ Atualiza perfil do usuário logado.
 - `cancelada` - Reserva cancelada
 - `concluida` - Reserva concluída
 
+### Status do Pedido (status_pedido)
+- `pendente` - Aguardando preparo
+- `preparando` - Em preparação
+- `pronto` - Pronto para entrega
+- `entregue` - Entregue ao cliente
+- `cancelado` - Pedido cancelado
+
 ### Período da Aula (periodo_aula)
-- `manhã` - 06:00 às 12:00
+- `manha` - 06:00 às 12:00
 - `tarde` - 12:00 às 18:00
 - `noite` - 18:00 às 22:00
 
@@ -815,6 +1005,18 @@ Atualiza perfil do usuário logado.
 - 3x por semana
 - Aula Avulsa
 
+### Categorias de Estoque
+- equipamentos
+- materiais
+- uniformes
+- acessorios
+
+### Categorias Lanchonete
+- bebidas
+- lanches
+- doces
+- salgados
+
 ### Tipos Sanguíneos
 - A+, A-, AB+, AB-, B+, B-, O+, O-
 
@@ -828,3 +1030,24 @@ Atualiza perfil do usuário logado.
 | 4 | Qui | Quinta-feira |
 | 5 | Sex | Sexta-feira |
 | 6 | Sab | Sábado |
+
+---
+
+## Tabelas do Banco de Dados
+
+### Principais Tabelas
+- `alunos` - Cadastro de alunos
+- `aluno_modalidades` - Modalidades matriculadas por aluno
+- `cronograma_aulas` - Cronograma de aulas por aluno
+- `aulas_recorrentes` - Grade de aulas recorrentes
+- `reservas` - Reservas de horários
+- `produtos_estoque` - Estoque geral
+- `lanchonete_produtos` - Produtos da lanchonete
+- `lanchonete_pedidos` - Pedidos da lanchonete
+- `lanchonete_pedido_itens` - Itens dos pedidos
+- `lanchonete_itens_preparo` - Ingredientes/itens de preparo
+- `modalidade_precos` - Preços por modalidade/plano
+- `aulas_avulsas_precos` - Preços de aulas avulsas
+- `configuracoes` - Configurações do sistema
+- `profiles` - Perfis de usuários
+- `user_roles` - Papéis dos usuários
