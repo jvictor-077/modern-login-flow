@@ -1,5 +1,5 @@
 // Serviço de reservas - lógica de negócio centralizada
-// Pronto para substituir por chamadas ao Supabase/PostgreSQL
+// Conectado ao Supabase
 
 import { format, isSameDay, isBefore, isToday } from "date-fns";
 import { 
@@ -9,23 +9,36 @@ import {
   SingleBooking,
   SlotStatus
 } from "@/types/booking";
-import { 
-  courts, 
-  operatingHours, 
-  pricingRules, 
-  recurringClasses, 
-  singleBookings,
-  COURT_ID,
-  COURT_NAME
-} from "@/data/mockData";
+import { supabase } from "@/integrations/supabase/client";
 
-// Estado local para simular o banco (será substituído por Supabase)
-let localRecurringClasses = [...recurringClasses];
-let localSingleBookings = [...singleBookings];
+// Constantes
+const COURT_ID = "court-1";
+const COURT_NAME = "Quadra Principal";
 
-// === QUADRA (única) ===
+// Dados locais para operações síncronas (cache)
+let localRecurringClasses: RecurringClass[] = [];
+let localSingleBookings: SingleBooking[] = [];
+
+// Horários de funcionamento padrão
+const defaultOperatingHours = [
+  { day_of_week: 0, start_hour: 8, end_hour: 18 }, // Domingo
+  { day_of_week: 1, start_hour: 7, end_hour: 22 }, // Segunda
+  { day_of_week: 2, start_hour: 7, end_hour: 22 }, // Terça
+  { day_of_week: 3, start_hour: 7, end_hour: 22 }, // Quarta
+  { day_of_week: 4, start_hour: 7, end_hour: 22 }, // Quinta
+  { day_of_week: 5, start_hour: 7, end_hour: 22 }, // Sexta
+  { day_of_week: 6, start_hour: 8, end_hour: 20 }, // Sábado
+];
+
+// Preços padrão
+const defaultPricingRules = [
+  { duration_hours: 1, price: 60 },
+  { duration_hours: 2, price: 100 },
+];
+
+// === QUADRA ===
 export function getCourt() {
-  return courts[0];
+  return { id: COURT_ID, name: COURT_NAME, sport_type: "beach_tennis", is_active: true, created_at: new Date() };
 }
 
 export function getCourtId() {
@@ -36,18 +49,18 @@ export function getCourtName() {
   return COURT_NAME;
 }
 
-// Legacy - mantido para compatibilidade
 export function getCourts() {
-  return courts.filter(c => c.is_active);
+  return [getCourt()];
 }
 
 export function getCourtById(courtId: string) {
-  return courts.find(c => c.id === courtId);
+  if (courtId === COURT_ID) return getCourt();
+  return undefined;
 }
 
 // === HORÁRIOS DE FUNCIONAMENTO ===
 export function getOperatingHoursForDay(dayOfWeek: number) {
-  return operatingHours.filter(oh => oh.day_of_week === dayOfWeek && oh.is_active);
+  return defaultOperatingHours.filter(oh => oh.day_of_week === dayOfWeek);
 }
 
 export function generateTimeSlots(date: Date): string[] {
@@ -56,7 +69,6 @@ export function generateTimeSlots(date: Date): string[] {
   
   if (hours.length === 0) return [];
   
-  // Pega o maior intervalo de horários
   const startHour = Math.min(...hours.map(h => h.start_hour));
   const endHour = Math.max(...hours.map(h => h.end_hour));
   
@@ -94,23 +106,47 @@ export function getAllValidTimes(): string[] {
 
 // === PREÇOS ===
 export function getPrice(courtId?: string, durationHours: number = 1): number {
-  const id = courtId ?? COURT_ID;
-  const rule = pricingRules.find(
-    p => p.court_id === id && p.duration_hours === durationHours && p.is_active
-  );
-  return rule?.price ?? durationHours * 60; // fallback
+  const rule = defaultPricingRules.find(p => p.duration_hours === durationHours);
+  return rule?.price ?? durationHours * 60;
 }
 
 export function getPricingRules() {
-  return pricingRules.filter(p => p.is_active);
+  return defaultPricingRules;
 }
 
-// === AULAS RECORRENTES ===
+// === AULAS RECORRENTES (do Supabase) ===
+export async function fetchRecurringClasses(): Promise<RecurringClass[]> {
+  const { data, error } = await supabase
+    .from("aulas_recorrentes")
+    .select("*")
+    .order("horario_inicio");
+
+  if (error) {
+    console.error("Erro ao buscar aulas recorrentes:", error);
+    return [];
+  }
+
+  const classes: RecurringClass[] = (data || []).map(aula => ({
+    id: aula.id,
+    court_id: COURT_ID,
+    class_type: aula.modalidade,
+    instructor_name: aula.professor,
+    days_of_week: [aula.dia_semana],
+    start_time: aula.horario_inicio.slice(0, 5),
+    end_time: aula.horario_fim.slice(0, 5),
+    is_active: true,
+    created_at: new Date(aula.created_at),
+    enrolled_students: [],
+  }));
+
+  localRecurringClasses = classes;
+  return classes;
+}
+
 export function getRecurringClasses(): RecurringClass[] {
   return localRecurringClasses.filter(rc => rc.is_active);
 }
 
-// Busca aulas do aluno pelo user_id
 export function getRecurringClassesForStudent(userId: string): RecurringClass[] {
   return localRecurringClasses.filter(
     rc => rc.is_active && rc.enrolled_students?.includes(userId)
@@ -136,7 +172,6 @@ export function deleteRecurringClass(classId: string): boolean {
   return false;
 }
 
-// Matricular aluno em uma aula
 export function enrollStudent(classId: string, userId: string): boolean {
   const index = localRecurringClasses.findIndex(rc => rc.id === classId);
   if (index !== -1) {
@@ -151,7 +186,6 @@ export function enrollStudent(classId: string, userId: string): boolean {
   return false;
 }
 
-// Remover matrícula do aluno
 export function unenrollStudent(classId: string, userId: string): boolean {
   const index = localRecurringClasses.findIndex(rc => rc.id === classId);
   if (index !== -1 && localRecurringClasses[index].enrolled_students) {
@@ -208,7 +242,6 @@ export function checkTimeConflict(
   const dayOfWeek = date.getDay();
   const dateStr = format(date, "yyyy-MM-dd");
   
-  // Verifica conflito com aulas recorrentes
   for (const rc of localRecurringClasses) {
     if (!rc.is_active) continue;
     if (rc.court_id !== courtId) continue;
@@ -221,7 +254,6 @@ export function checkTimeConflict(
     }
   }
   
-  // Verifica conflito com reservas avulsas
   for (const sb of localSingleBookings) {
     if (sb.status === "cancelled") continue;
     if (sb.id === excludeBookingId) continue;
@@ -262,7 +294,7 @@ export function checkRecurringConflict(
   return { hasConflict: false };
 }
 
-// === SLOTS DO CALENDÁRIO (ADMIN) ===
+// === SLOTS DO CALENDÁRIO ===
 export function getCalendarSlotsForDate(date: Date, courtId?: string): CalendarSlot[] {
   const timeSlots = generateTimeSlots(date);
   const dayOfWeek = date.getDay();
@@ -271,7 +303,6 @@ export function getCalendarSlotsForDate(date: Date, courtId?: string): CalendarS
   return timeSlots.map(slot => {
     const slotTime = slot.split(" - ")[0];
     
-    // Verifica aulas recorrentes
     for (const rc of localRecurringClasses) {
       if (!rc.is_active) continue;
       if (courtId && rc.court_id !== courtId) continue;
@@ -285,7 +316,6 @@ export function getCalendarSlotsForDate(date: Date, courtId?: string): CalendarS
       }
     }
     
-    // Verifica reservas avulsas
     for (const sb of localSingleBookings) {
       if (sb.status === "cancelled") continue;
       if (courtId && sb.court_id !== courtId) continue;
@@ -306,7 +336,7 @@ export function getCalendarSlotsForDate(date: Date, courtId?: string): CalendarS
   });
 }
 
-// === SLOTS DISPONÍVEIS (ALUNO) ===
+// === SLOTS DISPONÍVEIS ===
 export function getAvailableSlotsForDate(date: Date): AvailableSlot[] {
   if (isBefore(date, new Date()) && !isToday(date)) {
     return [];

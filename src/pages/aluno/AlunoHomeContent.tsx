@@ -10,10 +10,15 @@ import {
   Moon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { alunoLogado } from "@/data/alunosData";
 import { DIAS_SEMANA } from "@/types/aluno";
 import { getRecurringClassesForStudent, getCourtById } from "@/services/bookingService";
-import { DAYS_OF_WEEK } from "@/data/mockData";
+
+// Dados do aluno logado (será substituído por contexto de auth)
+const alunoLogado = {
+  id: "aluno-1",
+  nome: "João Silva",
+  situacao: "em_dia" as const,
+};
 
 const diasSemana = DIAS_SEMANA.map(d => d.label);
 const diasSemanaFull = DIAS_SEMANA.map(d => d.full);

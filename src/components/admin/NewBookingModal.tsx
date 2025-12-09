@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { CLASS_TYPES, DAYS_OF_WEEK } from "@/data/mockData";
+import { CLASS_TYPES, DAYS_OF_WEEK } from "@/data";
 import {
   getAllValidTimes,
   getValidTimesForDay,

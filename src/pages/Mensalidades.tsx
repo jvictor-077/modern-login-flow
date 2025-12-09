@@ -33,8 +33,24 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus, Search, UserPlus, Phone, User, CreditCard, MapPin, Heart, Calendar, CheckCircle, Loader2, Key } from "lucide-react";
 import { toast } from "sonner";
 import { TIPOS_SANGUINEOS } from "@/types/aluno";
-import { precosModalidades, getPlanosModalidade, formatarPreco, matricula } from "@/data/precosData";
+import { formatarPreco } from "@/hooks/usePrecos";
 import { supabase } from "@/integrations/supabase/client";
+
+// Preços estáticos (serão carregados do banco posteriormente)
+const PRECOS_MODALIDADES: Record<string, { nome: string; valor: number }[]> = {
+  "Funcional": [{ nome: "Mensal", valor: 180 }, { nome: "Trimestral", valor: 160 }, { nome: "1x por semana", valor: 110 }],
+  "Vôlei Adulto Noite": [{ nome: "Mensal", valor: 180 }, { nome: "Trimestral", valor: 160 }, { nome: "1x por semana", valor: 110 }],
+  "Vôlei Teen": [{ nome: "Mensal", valor: 180 }, { nome: "Trimestral", valor: 160 }, { nome: "1x por semana", valor: 110 }],
+  "Vôlei Adulto Manhã": [{ nome: "Mensal", valor: 140 }, { nome: "1x por semana", valor: 90 }],
+  "Beach Tennis": [{ nome: "Mensal", valor: 220 }, { nome: "1x por semana", valor: 130 }],
+  "Futevôlei": [{ nome: "1x por semana", valor: 150 }, { nome: "2x por semana", valor: 220 }, { nome: "3x por semana", valor: 310 }],
+};
+
+const MATRICULA = { valor: 50, descricao: "Inclui camisa de treino" };
+
+function getPlanosModalidade(modalidade: string) {
+  return PRECOS_MODALIDADES[modalidade] || [];
+}
 
 interface Modalidade {
   nome: string;
@@ -60,8 +76,8 @@ interface Aluno {
   pin?: string;
 }
 
-// Lista de modalidades disponíveis (extraída de precosData)
-const modalidadesDisponiveis = precosModalidades.map((m) => m.modalidade);
+// Lista de modalidades disponíveis
+const modalidadesDisponiveis = Object.keys(PRECOS_MODALIDADES);
 
 const tiposSanguineos = [...TIPOS_SANGUINEOS];
 
@@ -517,9 +533,9 @@ export default function Mensalidades() {
                     {/* Info Matrícula */}
                     <div className="p-3 rounded-lg bg-primary/10 border border-primary/30">
                       <p className="text-sm font-medium">
-                        Taxa de Matrícula: {formatarPreco(matricula.valor)}
+                        Taxa de Matrícula: {formatarPreco(MATRICULA.valor)}
                       </p>
-                      <p className="text-xs text-muted-foreground">{matricula.descricao}</p>
+                      <p className="text-xs text-muted-foreground">{MATRICULA.descricao}</p>
                     </div>
                   </div>
 

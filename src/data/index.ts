@@ -1,18 +1,36 @@
 // =============================================
-// EXPORTAÇÃO CENTRAL DE TODOS OS DADOS MOCKADOS
+// EXPORTAÇÃO CENTRAL - TIPOS E CONSTANTES
 // =============================================
 
-// Dados de Reservas/Quadras
-export * from "./mockData";
+// Tipos de Reservas/Quadras
+export * from "../types/booking";
 
-// Dados de Alunos/Mensalidades
-export * from "./alunosData";
+// Tipos de Alunos
+export * from "../types/aluno";
 
-// Dados de Estoque (Quadra)
-export * from "./estoqueData";
+// Tipos de Estoque
+export * from "../types/estoque";
 
-// Dados de Lanchonete
-export * from "./lanchoneteData";
+// Tipos de Lanchonete
+export * from "../types/lanchonete";
 
-// Dados de Preços/Planos
-export * from "./precosData";
+// Constantes de tipos de aula
+export const CLASS_TYPES = [
+  "Beach Tennis",
+  "Vôlei Adulto Noite",
+  "Vôlei Adulto Manhã",
+  "Vôlei Teen",
+  "Futevôlei",
+  "Funcional",
+];
+
+// Dias da semana
+export const DAYS_OF_WEEK = [
+  { value: 0, label: "Dom" },
+  { value: 1, label: "Seg" },
+  { value: 2, label: "Ter" },
+  { value: 3, label: "Qua" },
+  { value: 4, label: "Qui" },
+  { value: 5, label: "Sex" },
+  { value: 6, label: "Sab" },
+];
