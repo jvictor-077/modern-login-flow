@@ -49,50 +49,46 @@ serve(async (req) => {
 
     const products: ScannedProduct[] = [];
     
-    // Regex para extrair cada produto
-    // Estrutura: <span class="txtTit">NOME</span>...<span class="Rqtd"><strong>Qtde.: </strong>QTD</span><span class="RUN"><strong>UN: </strong>UN</span><span class="RvlUnit"><strong>Vl. Unit.: </strong>PRECO</span>
+    // Dividir por linhas da tabela <tr>
+    const rows = html.split(/<tr>/i);
+    console.log('Linhas encontradas:', rows.length);
     
-    // Encontrar todos os nomes de produtos
-    const nomeRegex = /<span class="txtTit">([^<]+)<\/span>/g;
-    let nomeMatch;
-    const nomes: {nome: string, index: number}[] = [];
-    
-    while ((nomeMatch = nomeRegex.exec(html)) !== null) {
-      // Ignorar spans com classe "txtTit noWrap" (são os totais)
-      const before = html.substring(Math.max(0, nomeMatch.index - 30), nomeMatch.index);
-      if (!before.includes('noWrap')) {
-        nomes.push({ nome: nomeMatch[1].trim(), index: nomeMatch.index });
+    for (const row of rows) {
+      // Pular se não tem produto (verificar se tem txtTit sem noWrap)
+      if (!row.includes('class="txtTit"') || row.includes('txtTit noWrap')) {
+        continue;
       }
-    }
-    
-    console.log('Nomes encontrados:', nomes.length);
-    
-    // Para cada nome, encontrar qtd, un e preco no contexto seguinte
-    for (let i = 0; i < nomes.length; i++) {
-      const { nome, index } = nomes[i];
-      const endIndex = i < nomes.length - 1 ? nomes[i + 1].index : index + 600;
-      const context = html.substring(index, endIndex);
       
-      // Extrair quantidade: <span class="Rqtd"><strong>Qtde.: </strong>VALUE</span>
-      const qtdMatch = context.match(/<span class="Rqtd"><strong>Qtde\.: <\/strong>([^<]+)<\/span>/);
-      // Extrair unidade: <span class="RUN"><strong>UN: </strong>VALUE</span>
-      const unMatch = context.match(/<span class="RUN"><strong>UN: <\/strong>([^<]+)<\/span>/);
-      // Extrair preço: <span class="RvlUnit"><strong>Vl. Unit.: </strong>VALUE</span>
-      const precoMatch = context.match(/<span class="RvlUnit"><strong>Vl\. Unit\.: <\/strong>([^<]+)<\/span>/);
+      // Extrair nome - padrão: <span class="txtTit">NOME</span>
+      const nomeMatch = row.match(/<span class="txtTit">([^<]+)<\/span>/);
+      if (!nomeMatch) continue;
+      
+      const nome = nomeMatch[1].trim();
+      
+      // Extrair quantidade - padrão: <span class="Rqtd"><strong>Qtde.: </strong>VALOR</span>
+      const qtdMatch = row.match(/<span class="Rqtd"><strong>Qtde\.: <\/strong>([^<]+)<\/span>/);
+      
+      // Extrair unidade - padrão: <span class="RUN"><strong>UN: </strong>VALOR</span>
+      const unMatch = row.match(/<span class="RUN"><strong>UN: <\/strong>([^<]+)<\/span>/);
+      
+      // Extrair preço - padrão: <span class="RvlUnit"><strong>Vl. Unit.: </strong>VALOR</span>
+      const precoMatch = row.match(/<span class="RvlUnit"><strong>Vl\. Unit\.: <\/strong>([^<]+)<\/span>/);
       
       if (qtdMatch && precoMatch) {
-        const quantidade = parseFloat(qtdMatch[1].replace(',', '.')) || 1;
+        // Converter valores brasileiros (vírgula para ponto)
+        const qtdStr = qtdMatch[1].trim().replace(',', '.');
+        const precoStr = precoMatch[1].trim().replace(',', '.');
+        
+        const quantidade = parseFloat(qtdStr) || 1;
+        const preco = parseFloat(precoStr) || 0;
         const unidade = unMatch ? unMatch[1].trim() : 'UN';
-        const preco = parseFloat(precoMatch[1].replace(',', '.')) || 0;
         
         products.push({ nome, quantidade, preco, unidade });
-        console.log('OK:', nome, quantidade, unidade, preco);
-      } else {
-        console.log('FALHA:', nome, 'qtd:', !!qtdMatch, 'preco:', !!precoMatch);
+        console.log('Produto:', nome, '| Qtd:', quantidade, '| Preço:', preco, '| UN:', unidade);
       }
     }
 
-    console.log('Total:', products.length);
+    console.log('Total produtos:', products.length);
 
     return new Response(
       JSON.stringify({ success: true, products }),
