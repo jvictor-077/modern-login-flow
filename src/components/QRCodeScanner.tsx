@@ -45,14 +45,19 @@ export function QRCodeScanner({ open, onClose, onProductsScanned }: QRCodeScanne
   const isValidSefazUrl = (url: string): boolean => {
     try {
       const parsedUrl = new URL(url);
-      // Must be HTTPS
-      if (parsedUrl.protocol !== 'https:') {
+      // Accept both HTTP and HTTPS (SEFAZ QR codes often use HTTP)
+      if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') {
         return false;
       }
       // Must be a valid Brazilian government SEFAZ/Fazenda domain
+      // Examples: nfce.sefaz.pe.gov.br, www.sefaz.am.gov.br, nfce.fazenda.sp.gov.br
       const hostname = parsedUrl.hostname.toLowerCase();
-      const validDomainPattern = /^[\w.-]+\.(fazenda|sefaz)[\w.-]*\.gov\.br$/;
-      return validDomainPattern.test(hostname);
+      const validDomainPatterns = [
+        /sefaz.*\.gov\.br$/,     // Any subdomain containing sefaz before .gov.br
+        /fazenda.*\.gov\.br$/,   // Any subdomain containing fazenda before .gov.br
+        /nfce.*\.gov\.br$/,      // Any NFC-e government domain
+      ];
+      return validDomainPatterns.some(pattern => pattern.test(hostname));
     } catch {
       return false;
     }
