@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,10 +30,11 @@ import {
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Search, UserPlus, Phone, User, CreditCard, MapPin, Heart, Calendar, CheckCircle } from "lucide-react";
+import { Plus, Search, UserPlus, Phone, User, CreditCard, MapPin, Heart, Calendar, CheckCircle, Loader2, Key } from "lucide-react";
 import { toast } from "sonner";
 import { TIPOS_SANGUINEOS } from "@/types/aluno";
 import { precosModalidades, getPlanosModalidade, formatarPreco, matricula } from "@/data/precosData";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Modalidade {
   nome: string;
@@ -56,52 +57,13 @@ interface Aluno {
   observacoes: string;
   autorizaImagem: boolean;
   situacao: "em_dia" | "pendente" | "atrasado";
+  pin?: string;
 }
 
 // Lista de modalidades disponíveis (extraída de precosData)
 const modalidadesDisponiveis = precosModalidades.map((m) => m.modalidade);
 
 const tiposSanguineos = [...TIPOS_SANGUINEOS];
-
-const initialAlunos: Aluno[] = [
-  {
-    id: "1",
-    nome: "João Silva",
-    email: "joao@email.com",
-    cpf: "12345678900",
-    dataNascimento: "1990-05-15",
-    celular: "(11) 99999-1111",
-    endereco: "Rua das Flores, 123, Centro, São Paulo - SP, 01234-567",
-    contatoEmergencia: "Maria Silva - (11) 98888-1111",
-    tipoSanguineo: "O+",
-    doencas: "",
-    alergias: "",
-    modalidades: [{ nome: "Beach Tennis", plano: "Mensal" }],
-    observacoes: "",
-    autorizaImagem: true,
-    situacao: "em_dia",
-  },
-  {
-    id: "2",
-    nome: "Maria Santos",
-    email: "maria@email.com",
-    cpf: "98765432100",
-    dataNascimento: "1985-03-20",
-    celular: "(11) 99999-2222",
-    endereco: "Av. Brasil, 456, Jardins, São Paulo - SP, 04567-890",
-    contatoEmergencia: "Pedro Santos - (11) 98888-2222",
-    tipoSanguineo: "A+",
-    doencas: "",
-    alergias: "",
-    modalidades: [
-      { nome: "Vôlei Adulto Noite", plano: "1x por semana" },
-      { nome: "Beach Tennis", plano: "Trimestral" },
-    ],
-    observacoes: "",
-    autorizaImagem: true,
-    situacao: "pendente",
-  },
-];
 
 const emptyNovoAluno = {
   nome: "",
@@ -120,12 +82,67 @@ const emptyNovoAluno = {
 };
 
 export default function Mensalidades() {
-  const [alunos, setAlunos] = useState<Aluno[]>(initialAlunos);
+  const [alunos, setAlunos] = useState<Aluno[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [novoAluno, setNovoAluno] = useState(emptyNovoAluno);
   const [selectedAluno, setSelectedAluno] = useState<Aluno | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  const fetchAlunos = async () => {
+    try {
+      setLoading(true);
+      const { data: alunosData, error: alunosError } = await supabase
+        .from("alunos")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (alunosError) throw alunosError;
+
+      const { data: modalidadesData, error: modalidadesError } = await supabase
+        .from("aluno_modalidades")
+        .select("*");
+
+      if (modalidadesError) throw modalidadesError;
+
+      const alunosFormatados: Aluno[] = (alunosData || []).map((aluno) => {
+        const modalidadesAluno = (modalidadesData || [])
+          .filter((m) => m.aluno_id === aluno.id)
+          .map((m) => ({ nome: m.modalidade, plano: m.plano }));
+
+        return {
+          id: aluno.id,
+          nome: aluno.nome,
+          email: aluno.email,
+          cpf: aluno.cpf || "",
+          dataNascimento: aluno.data_nascimento || "",
+          celular: aluno.celular || "",
+          endereco: aluno.endereco || "",
+          contatoEmergencia: aluno.contato_emergencia || "",
+          tipoSanguineo: aluno.tipo_sanguineo || "",
+          doencas: aluno.doencas || "",
+          alergias: aluno.alergias || "",
+          modalidades: modalidadesAluno,
+          observacoes: aluno.observacoes || "",
+          autorizaImagem: aluno.autoriza_imagem || false,
+          situacao: aluno.situacao as "em_dia" | "pendente" | "atrasado",
+          pin: aluno.pin || undefined,
+        };
+      });
+
+      setAlunos(alunosFormatados);
+    } catch (error) {
+      console.error("Erro ao buscar alunos:", error);
+      toast.error("Erro ao carregar alunos");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAlunos();
+  }, []);
 
   const handleAlunoClick = (aluno: Aluno) => {
     setSelectedAluno(aluno);
@@ -148,7 +165,7 @@ export default function Mensalidades() {
     });
   };
 
-  const handleAddAluno = () => {
+  const handleAddAluno = async () => {
     if (
       !novoAluno.nome ||
       !novoAluno.email ||
@@ -167,32 +184,55 @@ export default function Mensalidades() {
       return;
     }
 
-    const modalidadesArray: Modalidade[] = Object.entries(novoAluno.modalidades).map(
-      ([nome, plano]) => ({ nome, plano })
-    );
+    try {
+      const { data: alunoData, error: alunoError } = await supabase
+        .from("alunos")
+        .insert({
+          nome: novoAluno.nome.trim(),
+          email: novoAluno.email.trim().toLowerCase(),
+          cpf: novoAluno.cpf.trim(),
+          celular: novoAluno.celular.trim(),
+          data_nascimento: novoAluno.dataNascimento,
+          endereco: novoAluno.endereco.trim() || null,
+          contato_emergencia: novoAluno.contatoEmergencia.trim(),
+          tipo_sanguineo: novoAluno.tipoSanguineo,
+          doencas: novoAluno.doencas.trim() || null,
+          alergias: novoAluno.alergias.trim() || null,
+          autoriza_imagem: novoAluno.autorizaImagem,
+          observacoes: novoAluno.observacoes.trim() || null,
+          situacao: "pendente",
+        })
+        .select("id")
+        .single();
 
-    const newAluno: Aluno = {
-      id: Date.now().toString(),
-      nome: novoAluno.nome,
-      email: novoAluno.email,
-      cpf: novoAluno.cpf,
-      dataNascimento: novoAluno.dataNascimento,
-      celular: novoAluno.celular,
-      endereco: novoAluno.endereco,
-      contatoEmergencia: novoAluno.contatoEmergencia,
-      tipoSanguineo: novoAluno.tipoSanguineo,
-      doencas: novoAluno.doencas,
-      alergias: novoAluno.alergias,
-      modalidades: modalidadesArray,
-      observacoes: novoAluno.observacoes,
-      autorizaImagem: novoAluno.autorizaImagem,
-      situacao: "pendente",
-    };
+      if (alunoError) throw alunoError;
 
-    setAlunos([...alunos, newAluno]);
-    setNovoAluno(emptyNovoAluno);
-    setIsDialogOpen(false);
-    toast.success("Aluno cadastrado com sucesso!");
+      const modalidadesInsert = Object.entries(novoAluno.modalidades).map(
+        ([modalidade, plano]) => {
+          const planoInfo = getPlanosModalidade(modalidade).find((p) => p.nome === plano);
+          return {
+            aluno_id: alunoData.id,
+            modalidade,
+            plano,
+            valor: planoInfo?.valor || 0,
+          };
+        }
+      );
+
+      const { error: modalidadesError } = await supabase
+        .from("aluno_modalidades")
+        .insert(modalidadesInsert);
+
+      if (modalidadesError) throw modalidadesError;
+
+      setNovoAluno(emptyNovoAluno);
+      setIsDialogOpen(false);
+      toast.success("Aluno cadastrado com sucesso!");
+      fetchAlunos();
+    } catch (error) {
+      console.error("Erro ao cadastrar aluno:", error);
+      toast.error("Erro ao cadastrar aluno");
+    }
   };
 
   const getSituacaoBadge = (situacao: Aluno["situacao"]) => {
@@ -206,9 +246,21 @@ export default function Mensalidades() {
     }
   };
 
-  const updateSituacao = (id: string, situacao: Aluno["situacao"]) => {
-    setAlunos(alunos.map((a) => (a.id === id ? { ...a, situacao } : a)));
-    toast.success("Situação atualizada!");
+  const updateSituacao = async (id: string, situacao: Aluno["situacao"]) => {
+    try {
+      const { error } = await supabase
+        .from("alunos")
+        .update({ situacao })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setAlunos(alunos.map((a) => (a.id === id ? { ...a, situacao } : a)));
+      toast.success("Situação atualizada!");
+    } catch (error) {
+      console.error("Erro ao atualizar situação:", error);
+      toast.error("Erro ao atualizar situação");
+    }
   };
 
   return (
@@ -521,38 +573,52 @@ export default function Mensalidades() {
 
         {/* Tabela de alunos */}
         <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent border-border/50">
-                <TableHead className="text-muted-foreground">Nome</TableHead>
-                <TableHead className="text-muted-foreground hidden md:table-cell">Celular</TableHead>
-                <TableHead className="text-muted-foreground hidden md:table-cell">Modalidades</TableHead>
-                <TableHead className="text-muted-foreground">Situação</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAlunos.map((aluno) => (
-                <TableRow 
-                  key={aluno.id} 
-                  className="border-border/50 cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => handleAlunoClick(aluno)}
-                >
-                  <TableCell className="font-medium">{aluno.nome}</TableCell>
-                  <TableCell className="text-muted-foreground hidden md:table-cell">{aluno.celular}</TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <div className="flex flex-wrap gap-1">
-                      {aluno.modalidades.map((mod) => (
-                        <Badge key={mod.nome} variant="outline" className="text-xs">
-                          {mod.nome}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>{getSituacaoBadge(aluno.situacao)}</TableCell>
+          {loading ? (
+            <div className="flex items-center justify-center p-8">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent border-border/50">
+                  <TableHead className="text-muted-foreground">Nome</TableHead>
+                  <TableHead className="text-muted-foreground hidden md:table-cell">Celular</TableHead>
+                  <TableHead className="text-muted-foreground hidden md:table-cell">Modalidades</TableHead>
+                  <TableHead className="text-muted-foreground">Situação</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredAlunos.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                      Nenhum aluno encontrado
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredAlunos.map((aluno) => (
+                    <TableRow 
+                      key={aluno.id} 
+                      className="border-border/50 cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => handleAlunoClick(aluno)}
+                    >
+                      <TableCell className="font-medium">{aluno.nome}</TableCell>
+                      <TableCell className="text-muted-foreground hidden md:table-cell">{aluno.celular}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <div className="flex flex-wrap gap-1">
+                          {aluno.modalidades.map((mod) => (
+                            <Badge key={mod.nome} variant="outline" className="text-xs">
+                              {mod.nome}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>{getSituacaoBadge(aluno.situacao)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          )}
         </div>
 
         {/* Modal de Detalhes do Aluno */}
@@ -608,6 +674,16 @@ export default function Mensalidades() {
                         </SelectContent>
                       </Select>
                     </div>
+
+                    {selectedAluno.pin && (
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/10 border border-primary/30">
+                        <Key className="h-5 w-5 text-primary" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Senha de Acesso</p>
+                          <p className="font-mono text-lg tracking-widest">{selectedAluno.pin}</p>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="space-y-3">
                       <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
@@ -698,7 +774,7 @@ export default function Mensalidades() {
                         <div>
                           <p className="text-sm text-muted-foreground">Data de Nascimento</p>
                           <p className="font-medium">
-                            {new Date(selectedAluno.dataNascimento).toLocaleDateString("pt-BR")}
+                            {selectedAluno.dataNascimento ? new Date(selectedAluno.dataNascimento).toLocaleDateString("pt-BR") : "Não informado"}
                           </p>
                         </div>
                       </div>
@@ -707,7 +783,7 @@ export default function Mensalidades() {
                         <Heart className="h-5 w-5 text-red-400 mt-0.5" />
                         <div>
                           <p className="text-sm text-muted-foreground">Tipo Sanguíneo</p>
-                          <p className="font-medium">{selectedAluno.tipoSanguineo}</p>
+                          <p className="font-medium">{selectedAluno.tipoSanguineo || "Não informado"}</p>
                         </div>
                       </div>
 
