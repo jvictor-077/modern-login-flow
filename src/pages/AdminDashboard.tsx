@@ -102,6 +102,11 @@ export default function AdminDashboard() {
               ))}
             </div>
 
+            {/* Mobile Action Button */}
+            <div className="lg:hidden mb-4">
+              <NewBookingModal onBookingAdded={handleBookingAdded} />
+            </div>
+
             {/* Main Content - Calendar + Time Slots */}
             <div className="grid lg:grid-cols-[380px_1fr] gap-6">
               {/* Calendar Section */}
@@ -112,7 +117,9 @@ export default function AdminDashboard() {
                       <CalendarDays className="w-5 h-5 text-primary" />
                       Calendário
                     </CardTitle>
-                    <NewBookingModal onBookingAdded={handleBookingAdded} />
+                    <div className="hidden lg:block">
+                      <NewBookingModal onBookingAdded={handleBookingAdded} />
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
