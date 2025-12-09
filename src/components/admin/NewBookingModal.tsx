@@ -37,11 +37,12 @@ import {
   checkTimeConflict,
   checkRecurringConflict,
   addRecurringClass,
-  addSingleBooking,
   getPrice,
   calculateEndTime,
   getCourtId,
 } from "@/services/bookingService";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface NewBookingModalProps {
   onBookingAdded?: () => void;
@@ -49,7 +50,9 @@ interface NewBookingModalProps {
 
 export function NewBookingModal({ onBookingAdded }: NewBookingModalProps) {
   const [open, setOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const courtId = getCourtId();
 
@@ -124,7 +127,7 @@ export function NewBookingModal({ onBookingAdded }: NewBookingModalProps) {
     onBookingAdded?.();
   };
 
-  const handleSaveSingle = () => {
+  const handleSaveSingle = async () => {
     if (!clientName || !singleDate || !singleTime) {
       toast({
         variant: "destructive",
@@ -144,7 +147,7 @@ export function NewBookingModal({ onBookingAdded }: NewBookingModalProps) {
       return;
     }
 
-    // Verifica conflitos
+    // Verifica conflitos localmente primeiro
     const conflict = checkTimeConflict(singleDate, singleTime, courtId);
     if (conflict.hasConflict) {
       toast({
@@ -155,28 +158,78 @@ export function NewBookingModal({ onBookingAdded }: NewBookingModalProps) {
       return;
     }
 
-    const price = getPrice(courtId, 1);
-    
-    addSingleBooking({
-      court_id: courtId,
-      user_id: undefined, // Reserva pelo admin
-      client_name: clientName,
-      date: singleDate,
-      start_time: singleTime,
-      end_time: calculateEndTime(singleTime, 1),
-      duration_hours: 1,
-      price,
-      status: "confirmed",
-      payment_status: "pending",
-    });
+    setIsSubmitting(true);
 
-    toast({
-      title: "Agendamento criado!",
-      description: `Reserva para ${clientName} confirmada.`,
-    });
-    resetForm();
-    setOpen(false);
-    onBookingAdded?.();
+    try {
+      // Primeiro, verificar se já existe um aluno com esse nome ou criar entrada temporária
+      // Para reservas admin, usamos um aluno padrão ou criamos na hora
+      const { data: alunoExistente } = await supabase
+        .from("alunos")
+        .select("id")
+        .ilike("nome", clientName)
+        .limit(1)
+        .single();
+
+      let alunoId = alunoExistente?.id;
+
+      // Se não existe aluno, criar um registro temporário
+      if (!alunoId) {
+        const { data: novoAluno, error: erroAluno } = await supabase
+          .from("alunos")
+          .insert({
+            nome: clientName,
+            email: `${clientName.toLowerCase().replace(/\s+/g, '.')}@reserva.temp`,
+            situacao: "pendente",
+          })
+          .select("id")
+          .single();
+
+        if (erroAluno) {
+          throw new Error("Erro ao criar registro do cliente");
+        }
+        alunoId = novoAluno.id;
+      }
+
+      // Criar a reserva no banco de dados
+      const dataFormatada = format(singleDate, "yyyy-MM-dd");
+      const horarioFim = calculateEndTime(singleTime, 1);
+
+      const { error: erroReserva } = await supabase
+        .from("reservas")
+        .insert({
+          aluno_id: alunoId,
+          data: dataFormatada,
+          horario_inicio: singleTime,
+          horario_fim: horarioFim,
+          status: "confirmada",
+        });
+
+      if (erroReserva) {
+        throw new Error("Erro ao criar reserva: " + erroReserva.message);
+      }
+
+      // Invalidar queries para atualizar dashboard
+      await queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+      await queryClient.invalidateQueries({ queryKey: ["reservas-do-dia"] });
+      await queryClient.invalidateQueries({ queryKey: ["todas-reservas"] });
+
+      toast({
+        title: "Agendamento criado!",
+        description: `Reserva para ${clientName} confirmada.`,
+      });
+      resetForm();
+      setOpen(false);
+      onBookingAdded?.();
+    } catch (error) {
+      console.error("Erro ao salvar reserva:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao salvar",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDayToggle = (day: number, checked: boolean) => {
@@ -339,8 +392,12 @@ export function NewBookingModal({ onBookingAdded }: NewBookingModalProps) {
               </Select>
             </div>
 
-            <Button onClick={handleSaveSingle} className="w-full mt-4">
-              Salvar Agendamento
+            <Button 
+              onClick={handleSaveSingle} 
+              className="w-full mt-4"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Salvando..." : "Salvar Agendamento"}
             </Button>
           </TabsContent>
         </Tabs>
