@@ -1,107 +1,3 @@
-// =============================================
-// DADOS MOCKADOS - ESTOQUE QUADRA (INTEGRADO)
-// =============================================
-
-// Definição da interface ProdutoEstoque (Assumida de "@/types/estoque")
-// Adicionada para que este arquivo seja autônomo.
-interface ProdutoEstoque {
-  id: string;
-  nome: string;
-  preco: number;
-  quantidade: number;
-  categoria?: string; // Adicionado "?" pois nem todos os mocks o utilizam
-  is_active: boolean;
-  created_at: Date;
-  updated_at: Date;
-  // Outras propriedades se existirem em "@/types/estoque"
-}
-
-export const produtosEstoqueQuadra: ProdutoEstoque[] = [
-  {
-    id: "prod-1",
-    nome: "Bola de Vôlei Mikasa",
-    preco: 189.9,
-    quantidade: 8,
-    categoria: "Equipamentos",
-    is_active: true,
-    created_at: new Date("2024-01-01"),
-    updated_at: new Date("2024-01-01"),
-  },
-  {
-    id: "prod-2",
-    nome: "Raquete Beach Tennis Pro",
-    preco: 459.9,
-    quantidade: 5,
-    categoria: "Equipamentos",
-    is_active: true,
-    created_at: new Date("2024-01-01"),
-    updated_at: new Date("2024-01-01"),
-  },
-  {
-    id: "prod-3",
-    nome: "Rede de Vôlei Profissional",
-    preco: 299.9,
-    quantidade: 3,
-    categoria: "Equipamentos",
-    is_active: true,
-    created_at: new Date("2024-01-01"),
-    updated_at: new Date("2024-01-01"),
-  },
-  {
-    id: "prod-4",
-    nome: "Kit Marcação de Quadra",
-    preco: 89.9,
-    quantidade: 12,
-    categoria: "Materiais",
-    is_active: true,
-    created_at: new Date("2024-01-01"),
-    updated_at: new Date("2024-01-01"),
-  },
-  {
-    id: "prod-5",
-    nome: "Bola de Beach Tennis (Pack 3)",
-    preco: 59.9,
-    quantidade: 20,
-    categoria: "Equipamentos",
-    is_active: true,
-    created_at: new Date("2024-01-01"),
-    updated_at: new Date("2024-01-01"),
-  },
-  {
-    id: "prod-6",
-    nome: "Grip Overgrip (Pack 10)",
-    preco: 34.9,
-    quantidade: 15,
-    categoria: "Acessórios",
-    is_active: true,
-    created_at: new Date("2024-01-01"),
-    updated_at: new Date("2024-01-01"),
-  },
-  {
-    id: "prod-7",
-    nome: "Squeeze 1L",
-    preco: 24.9,
-    quantidade: 25,
-    categoria: "Acessórios",
-    is_active: true,
-    created_at: new Date("2024-01-01"),
-    updated_at: new Date("2024-01-01"),
-  },
-  {
-    id: "prod-8",
-    nome: "Toalha Esportiva",
-    preco: 39.9,
-    quantidade: 18,
-    categoria: "Acessórios",
-    is_active: true,
-    created_at: new Date("2024-01-01"),
-    updated_at: new Date("2024-01-01"),
-  },
-];
-
-// =============================================
-// COMPONENTE ESTOQUE (INTEGRADO)
-// =============================================
 import { useState } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -116,13 +12,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ScanLine, Plus, Minus, Package, PlusCircle } from "lucide-react";
+import { ScanLine, Plus, Minus, Package, PlusCircle, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-// import { ProdutoEstoque } from "@/types/estoque"; // Removido, definido no início
-// import { produtosEstoqueQuadra } from "@/data/estoqueData"; // Removido, definido e exportado no início
 import { QRCodeScanner } from "@/components/QRCodeScanner";
 import { ScannedProductsConfirmation } from "@/components/ScannedProductsConfirmation";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useEstoque } from "@/hooks/useEstoque";
 
 interface ScannedProduct {
   nome: string;
@@ -131,29 +26,18 @@ interface ScannedProduct {
   unidade?: string;
 }
 
-// O tipo ProdutoEstoque já foi definido acima
-type EstoqueProduto = ProdutoEstoque; // Alias para clareza, se necessário
-
 export default function Estoque() {
-  // Agora 'produtosEstoqueQuadra' é importado localmente (no mesmo arquivo)
-  const [products, setProducts] = useState<EstoqueProduto[]>(produtosEstoqueQuadra);
+  const { produtos, isLoading, addProduto, updateQuantidade } = useEstoque();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
   const [scannedProducts, setScannedProducts] = useState<ScannedProduct[]>([]);
-  const [newProduct, setNewProduct] = useState({ name: "", price: "", quantity: "" });
+  const [newProduct, setNewProduct] = useState({ name: "", price: "", quantity: "", category: "" });
   const isMobile = useIsMobile();
 
-  const handleQuantityChange = (id: string, delta: number) => {
-    setProducts((prev) =>
-      prev.map((product) => {
-        if (product.id === id) {
-          const newQuantity = Math.max(0, product.quantidade + delta);
-          return { ...product, quantidade: newQuantity, updated_at: new Date() };
-        }
-        return product;
-      }),
-    );
+  const handleQuantityChange = (id: string, currentQty: number, delta: number) => {
+    const newQuantity = Math.max(0, currentQty + delta);
+    updateQuantidade.mutate({ id, quantidade: newQuantity });
   };
 
   const handleScanInvoice = () => {
@@ -173,22 +57,16 @@ export default function Estoque() {
   };
 
   const handleConfirmProducts = (confirmedProducts: ScannedProduct[]) => {
-    const newProducts: EstoqueProduto[] = confirmedProducts.map((p, index) => ({
-      id: `scanned-${Date.now()}-${index}`,
-      nome: p.nome,
-      preco: p.preco,
-      quantidade: Math.round(p.quantidade), // Sempre arredondar para inteiro no estoque
-      is_active: true,
-      created_at: new Date(),
-      updated_at: new Date(),
-    }));
-
-    setProducts((prev) => [...prev, ...newProducts]);
-    setScannedProducts([]);
-    toast({
-      title: "Produtos adicionados!",
-      description: `${newProducts.length} produtos foram adicionados ao estoque.`,
+    confirmedProducts.forEach((p) => {
+      addProduto.mutate({
+        nome: p.nome,
+        preco: p.preco,
+        quantidade: Math.round(p.quantidade),
+        categoria: "Nota Fiscal",
+        is_active: true,
+      });
     });
+    setScannedProducts([]);
   };
 
   const handleAddProduct = () => {
@@ -201,26 +79,29 @@ export default function Estoque() {
       return;
     }
 
-    const product: EstoqueProduto = {
-      id: `prod-${Date.now()}`,
+    addProduto.mutate({
       nome: newProduct.name.trim(),
       preco: parseFloat(newProduct.price.replace(",", ".")),
       quantidade: parseInt(newProduct.quantity),
+      categoria: newProduct.category || "Geral",
       is_active: true,
-      created_at: new Date(),
-      updated_at: new Date(),
-    };
-
-    setProducts((prev) => [...prev, product]);
-    setNewProduct({ name: "", price: "", quantity: "" });
-    setIsAddDialogOpen(false);
-    toast({
-      title: "Produto adicionado",
-      description: `${product.nome} foi adicionado ao estoque.`,
     });
+
+    setNewProduct({ name: "", price: "", quantity: "", category: "" });
+    setIsAddDialogOpen(false);
   };
 
-  const totalValue = products.reduce((acc, product) => acc + product.preco * product.quantidade, 0);
+  const totalValue = produtos.reduce((acc, product) => acc + product.preco * product.quantidade, 0);
+
+  if (isLoading) {
+    return (
+      <AdminLayout title="Estoque" description="Gerencie os produtos do seu estoque">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </AdminLayout>
+    );
+  }
 
   const actions = (
     <>
@@ -266,7 +147,17 @@ export default function Estoque() {
                 onChange={(e) => setNewProduct((prev) => ({ ...prev, quantity: e.target.value }))}
               />
             </div>
-            <Button onClick={handleAddProduct} className="w-full mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="category">Categoria</Label>
+              <Input
+                id="category"
+                placeholder="Ex: Equipamentos"
+                value={newProduct.category}
+                onChange={(e) => setNewProduct((prev) => ({ ...prev, category: e.target.value }))}
+              />
+            </div>
+            <Button onClick={handleAddProduct} className="w-full mt-4" disabled={addProduto.isPending}>
+              {addProduto.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Adicionar Produto
             </Button>
           </div>
@@ -292,8 +183,13 @@ export default function Estoque() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="divide-y divide-border/50">
-            {products.map((product) => (
+          {produtos.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">
+              Nenhum produto cadastrado. Adicione seu primeiro produto!
+            </div>
+          ) : (
+            <div className="divide-y divide-border/50">
+              {produtos.map((product) => (
               <div
                 key={product.id}
                 className="flex items-center justify-between p-3 sm:p-4 hover:bg-muted/30 transition-colors"
@@ -310,7 +206,8 @@ export default function Estoque() {
                     variant="outline"
                     size="icon"
                     className="h-7 w-7 sm:h-8 sm:w-8 border-border/50 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50"
-                    onClick={() => handleQuantityChange(product.id, -1)}
+                    onClick={() => handleQuantityChange(product.id, product.quantidade, -1)}
+                    disabled={updateQuantidade.isPending}
                   >
                     <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
                   </Button>
@@ -323,7 +220,8 @@ export default function Estoque() {
                     variant="outline"
                     size="icon"
                     className="h-7 w-7 sm:h-8 sm:w-8 border-border/50 hover:bg-accent/50 hover:text-accent-foreground hover:border-accent/50"
-                    onClick={() => handleQuantityChange(product.id, 1)}
+                    onClick={() => handleQuantityChange(product.id, product.quantidade, 1)}
+                    disabled={updateQuantidade.isPending}
                   >
                     <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
                   </Button>
@@ -335,8 +233,9 @@ export default function Estoque() {
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* Total */}
           <div className="border-t-2 border-primary/30 bg-primary/5 p-3 sm:p-4">
