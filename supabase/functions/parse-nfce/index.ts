@@ -28,12 +28,12 @@ serve(async (req) => {
       );
     }
 
-    console.log('Buscando:', url);
+    console.log('Fetching URL:', url);
 
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36',
-        'Accept': 'text/html',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       },
     });
 
@@ -45,50 +45,65 @@ serve(async (req) => {
     }
 
     const html = await response.text();
-    console.log('HTML recebido:', html.length, 'bytes');
+    console.log('HTML length:', html.length);
 
     const products: ScannedProduct[] = [];
     
-    // Dividir por linhas da tabela <tr>
+    // Split by <tr> to get each product row
     const rows = html.split(/<tr>/i);
-    console.log('Linhas encontradas:', rows.length);
+    console.log('Found rows:', rows.length);
     
     for (const row of rows) {
-      // Pular se não tem produto (verificar se tem txtTit sem noWrap)
-      if (!row.includes('class="txtTit"') || row.includes('txtTit noWrap')) {
+      // Skip rows that don't have product info or are header rows
+      // Product rows have txtTit without noWrap class
+      if (!row.includes('class="txtTit"') || !row.includes('class="Rqtd"')) {
         continue;
       }
       
-      // Extrair nome - padrão: <span class="txtTit">NOME</span>
+      // Skip the "Vl. Total" column which also has txtTit but with noWrap
+      // We want the first txtTit which is the product name
+      
+      // Extract product name - first txtTit span (not the noWrap one)
       const nomeMatch = row.match(/<span class="txtTit">([^<]+)<\/span>/);
-      if (!nomeMatch) continue;
+      if (!nomeMatch) {
+        console.log('No name match in row');
+        continue;
+      }
       
       const nome = nomeMatch[1].trim();
+      console.log('Found product:', nome);
       
-      // Extrair quantidade - padrão: <span class="Rqtd"><strong>Qtde.: </strong>VALOR</span>
+      // Extract quantity - pattern: <span class="Rqtd"><strong>Qtde.: </strong>VALUE</span>
       const qtdMatch = row.match(/<span class="Rqtd"><strong>Qtde\.: <\/strong>([^<]+)<\/span>/);
+      if (!qtdMatch) {
+        console.log('No qty match for:', nome);
+        continue;
+      }
       
-      // Extrair unidade - padrão: <span class="RUN"><strong>UN: </strong>VALOR</span>
+      // Extract unit - pattern: <span class="RUN"><strong>UN: </strong>VALUE</span>
       const unMatch = row.match(/<span class="RUN"><strong>UN: <\/strong>([^<]+)<\/span>/);
       
-      // Extrair preço - padrão: <span class="RvlUnit"><strong>Vl. Unit.: </strong>VALOR</span>
+      // Extract price - pattern: <span class="RvlUnit"><strong>Vl. Unit.: </strong>VALUE</span>
       const precoMatch = row.match(/<span class="RvlUnit"><strong>Vl\. Unit\.: <\/strong>([^<]+)<\/span>/);
-      
-      if (qtdMatch && precoMatch) {
-        // Converter valores brasileiros (vírgula para ponto)
-        const qtdStr = qtdMatch[1].trim().replace(',', '.');
-        const precoStr = precoMatch[1].trim().replace(',', '.');
-        
-        const quantidade = parseFloat(qtdStr) || 1;
-        const preco = parseFloat(precoStr) || 0;
-        const unidade = unMatch ? unMatch[1].trim() : 'UN';
-        
-        products.push({ nome, quantidade, preco, unidade });
-        console.log('Produto:', nome, '| Qtd:', quantidade, '| Preço:', preco, '| UN:', unidade);
+      if (!precoMatch) {
+        console.log('No price match for:', nome);
+        continue;
       }
+      
+      // Parse values - Brazilian format uses comma as decimal separator
+      const qtdStr = qtdMatch[1].trim().replace(',', '.');
+      const precoStr = precoMatch[1].trim().replace(',', '.');
+      
+      const quantidade = parseFloat(qtdStr) || 1;
+      const preco = parseFloat(precoStr) || 0;
+      const unidade = unMatch ? unMatch[1].trim() : 'UN';
+      
+      console.log(`Parsed: ${nome} | Qty: ${quantidade} | Price: ${preco} | Unit: ${unidade}`);
+      
+      products.push({ nome, quantidade, preco, unidade });
     }
 
-    console.log('Total produtos:', products.length);
+    console.log('Total products found:', products.length);
 
     return new Response(
       JSON.stringify({ success: true, products }),
@@ -96,9 +111,9 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Erro:', error);
+    console.error('Error:', error);
     return new Response(
-      JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Erro' }),
+      JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Erro desconhecido' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
