@@ -123,19 +123,6 @@ const CadastroAluno = () => {
     setIsSubmitting(true);
 
     try {
-      // Verificar se email já existe
-      const { data: existingEmail } = await supabase
-        .from("alunos")
-        .select("id")
-        .eq("email", formData.email.trim().toLowerCase())
-        .maybeSingle();
-
-      if (existingEmail) {
-        toast.error("Este email já está cadastrado. Aguarde aprovação ou entre em contato.");
-        setIsSubmitting(false);
-        return;
-      }
-
       const { data: alunoData, error: alunoError } = await supabase
         .from("alunos")
         .insert({
