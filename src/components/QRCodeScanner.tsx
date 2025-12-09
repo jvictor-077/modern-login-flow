@@ -5,6 +5,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { X, Camera, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ScannedProduct {
   nome: string;
@@ -91,40 +92,44 @@ export function QRCodeScanner({ open, onClose, onProductsScanned }: QRCodeScanne
     
     toast({
       title: "Nota fiscal detectada!",
-      description: "Abrindo nota em nova aba e carregando produtos de exemplo...",
+      description: "Buscando produtos...",
     });
 
-    // Open the SEFAZ URL in a new tab so user can view the actual invoice
-    window.open(url, '_blank', 'noopener,noreferrer');
-
-    // Since CORS blocks direct access to SEFAZ websites from browser,
-    // we use demonstration products. In production, use a backend proxy/edge function.
-    const demoProducts: ScannedProduct[] = [
-      { nome: "LING AURORA kg CHUR", quantidade: 0.51, preco: 16.98, unidade: "KG" },
-      { nome: "MASSA PRONTA TAPIOCA TIA DORA 1kg", quantidade: 1, preco: 6.28, unidade: "UN" },
-      { nome: "ALHO GRANEL kg", quantidade: 0.07, preco: 13.80, unidade: "KG" },
-      { nome: "EXT TOM POMODORO TP 265G", quantidade: 1, preco: 2.38, unidade: "UN" },
-      { nome: "PALETA SUINA RESF kg", quantidade: 0.368, preco: 19.48, unidade: "KG" },
-      { nome: "FILEZINHO FGO CONG AURORA BD1kg", quantidade: 1, preco: 23.48, unidade: "BD" },
-      { nome: "ARROZ BR TIO URBANO 1kg", quantidade: 2, preco: 4.68, unidade: "UN" },
-      { nome: "TOMATE SALADETE kg", quantidade: 0.93, preco: 5.48, unidade: "KG" },
-      { nome: "SAB SENADOR 130G COUNTRY", quantidade: 1, preco: 7.25, unidade: "UN" },
-      { nome: "COENTRO UN", quantidade: 1, preco: 2.98, unidade: "UN" },
-      { nome: "FOSFORO HOME FIAT LUX", quantidade: 1, preco: 5.18, unidade: "UN" },
-    ];
-    
-    // Short delay to allow new tab to open
-    setTimeout(() => {
-      toast({
-        title: "Produtos carregados!",
-        description: `${demoProducts.length} produtos de demonstração. A nota fiscal foi aberta em nova aba.`,
+    try {
+      // Use edge function to fetch and parse the NFC-e page (bypasses CORS)
+      const { data, error } = await supabase.functions.invoke('parse-nfce', {
+        body: { url },
       });
-      
-      onProductsScanned(demoProducts);
+
+      if (error) {
+        throw new Error(error.message || 'Erro ao processar nota');
+      }
+
+      if (data?.success && data?.products?.length > 0) {
+        toast({
+          title: "Produtos encontrados!",
+          description: `${data.products.length} produtos identificados na nota fiscal.`,
+        });
+        onProductsScanned(data.products);
+      } else {
+        toast({
+          title: "Nenhum produto encontrado",
+          description: data?.error || "Não foi possível extrair produtos da nota fiscal.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao processar nota fiscal:', error);
+      toast({
+        title: "Erro ao processar nota",
+        description: error instanceof Error ? error.message : "Não foi possível acessar a nota fiscal.",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
       isProcessingRef.current = false;
       onClose();
-    }, 500);
+    }
   }, [onProductsScanned, onClose, stopScanner]);
 
   const startScanner = useCallback(async () => {
