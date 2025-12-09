@@ -1,12 +1,13 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Clock, Check, Repeat, User } from "lucide-react";
+import { Clock, Check, Repeat, User, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { CalendarSlot } from "@/types/booking";
-import { getCalendarSlotsForDate, generateTimeSlots } from "@/services/bookingService";
+import { CalendarSlot, SlotStatus } from "@/types/booking";
+import { generateTimeSlots } from "@/services/bookingService";
+import { useReservasDoDia, useAulasRecorrentes } from "@/hooks/useDashboardStats";
 
 interface TimeSlotGridProps {
   selectedDate: Date;
@@ -14,11 +15,62 @@ interface TimeSlotGridProps {
 }
 
 export function TimeSlotGrid({ selectedDate, courtId }: TimeSlotGridProps) {
-  const slots = getCalendarSlotsForDate(selectedDate, courtId);
+  const { data: reservas, isLoading: isLoadingReservas } = useReservasDoDia(selectedDate);
+  const { data: aulasRecorrentes, isLoading: isLoadingAulas } = useAulasRecorrentes();
+  
   const timeSlots = generateTimeSlots(selectedDate);
   const formattedDate = format(selectedDate, "d 'de' MMMM", { locale: ptBR });
+  const dayOfWeek = selectedDate.getDay();
+
+  // Gerar slots do calendário combinando reservas e aulas recorrentes
+  const slots: CalendarSlot[] = timeSlots.map(slot => {
+    const slotTime = slot.split(" - ")[0];
+    
+    // Verificar aulas recorrentes para este dia da semana
+    const aulaRecorrente = aulasRecorrentes?.find(aula => 
+      aula.dia_semana === dayOfWeek && 
+      aula.horario_inicio.slice(0, 5) === slotTime
+    );
+    
+    if (aulaRecorrente) {
+      return {
+        time: slot,
+        status: "recurring" as SlotStatus,
+        label: `${aulaRecorrente.modalidade} - ${aulaRecorrente.professor}`,
+      };
+    }
+    
+    // Verificar reservas avulsas para esta data
+    const reserva = reservas?.find(r => 
+      r.horario_inicio.slice(0, 5) === slotTime && 
+      r.status !== "cancelada"
+    );
+    
+    if (reserva) {
+      return {
+        time: slot,
+        status: "single" as SlotStatus,
+        label: reserva.aluno?.nome || "Reservado",
+      };
+    }
+    
+    return {
+      time: slot,
+      status: "free" as SlotStatus,
+    };
+  });
 
   const freeSlots = slots.filter(slot => slot.status === "free").length;
+  const isLoading = isLoadingReservas || isLoadingAulas;
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col h-full items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground mt-2">Carregando horários...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
