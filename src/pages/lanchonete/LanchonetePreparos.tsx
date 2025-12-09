@@ -12,10 +12,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Minus, Package, PlusCircle, ScanLine } from "lucide-react";
+import { Plus, Minus, Package, PlusCircle, ScanLine, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { ItemPreparo } from "@/types/lanchonete";
-import { itensPreparo } from "@/data/lanchoneteData";
+import { useLanchonetePreparos } from "@/hooks/useLanchonete";
 import { QRCodeScanner } from "@/components/QRCodeScanner";
 import { ScannedProductsConfirmation } from "@/components/ScannedProductsConfirmation";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -28,24 +27,17 @@ interface ScannedProduct {
 }
 
 export default function LanchonetePreparos() {
-  const [products, setProducts] = useState<ItemPreparo[]>(itensPreparo);
+  const { itens, isLoading, addItem, updateQuantidade } = useLanchonetePreparos();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
   const [scannedProducts, setScannedProducts] = useState<ScannedProduct[]>([]);
-  const [newProduct, setNewProduct] = useState({ name: "", price: "", quantity: "", unit: "" });
+  const [newProduct, setNewProduct] = useState({ name: "", quantity: "", unit: "" });
   const isMobile = useIsMobile();
 
-  const handleQuantityChange = (id: string, delta: number) => {
-    setProducts((prev) =>
-      prev.map((product) => {
-        if (product.id === id) {
-          const newQuantity = Math.max(0, product.quantidade + delta);
-          return { ...product, quantidade: newQuantity, updated_at: new Date() };
-        }
-        return product;
-      })
-    );
+  const handleQuantityChange = (id: string, currentQty: number, delta: number) => {
+    const newQuantity = Math.max(0, currentQty + delta);
+    updateQuantidade.mutate({ id, quantidade: newQuantity });
   };
 
   const handleScanInvoice = () => {
@@ -65,37 +57,25 @@ export default function LanchonetePreparos() {
   };
 
   const handleConfirmProducts = (confirmedProducts: ScannedProduct[]) => {
-    const isKgUnit = (unit?: string) => unit?.toUpperCase() === "KG";
-    
-    const newProducts: ItemPreparo[] = confirmedProducts.map((p, index) => {
-      const unidade = p.unidade || "unidade";
-      // Se for KG, formata o nome com a quantidade decimal
-      const nomeFormatado = isKgUnit(unidade) 
+    confirmedProducts.forEach((p) => {
+      const isKgUnit = p.unidade?.toUpperCase() === "KG";
+      const nomeFormatado = isKgUnit 
         ? `${p.nome} ${p.quantidade.toFixed(1).replace(".", ",")} KG`
         : p.nome;
-      
-      return {
-        id: `scanned-${Date.now()}-${index}`,
-        nome: nomeFormatado,
-        preco: p.preco * p.quantidade, // Preço total do item
-        quantidade: 1, // Cada item escaneado vira 1 unidade
-        unidade: isKgUnit(unidade) ? "unidade" : unidade,
-        is_active: true,
-        created_at: new Date(),
-        updated_at: new Date(),
-      };
-    });
 
-    setProducts((prev) => [...prev, ...newProducts]);
-    setScannedProducts([]);
-    toast({
-      title: "Itens adicionados!",
-      description: `${newProducts.length} itens foram adicionados ao estoque.`,
+      addItem.mutate({
+        nome: nomeFormatado,
+        quantidade: isKgUnit ? 1 : Math.round(p.quantidade),
+        unidade: isKgUnit ? "unidade" : (p.unidade || "un"),
+        estoque_minimo: 5,
+        is_active: true,
+      });
     });
+    setScannedProducts([]);
   };
 
   const handleAddProduct = () => {
-    if (!newProduct.name.trim() || !newProduct.price || !newProduct.quantity) {
+    if (!newProduct.name.trim() || !newProduct.quantity) {
       toast({
         title: "Campos obrigatórios",
         description: "Preencha todos os campos para adicionar o item.",
@@ -104,30 +84,17 @@ export default function LanchonetePreparos() {
       return;
     }
 
-    const product: ItemPreparo = {
-      id: `prep-${Date.now()}`,
+    addItem.mutate({
       nome: newProduct.name.trim(),
-      preco: parseFloat(newProduct.price.replace(",", ".")),
       quantidade: parseInt(newProduct.quantity),
-      unidade: newProduct.unit || "unidade",
+      unidade: newProduct.unit || "un",
+      estoque_minimo: 5,
       is_active: true,
-      created_at: new Date(),
-      updated_at: new Date(),
-    };
-
-    setProducts((prev) => [...prev, product]);
-    setNewProduct({ name: "", price: "", quantity: "", unit: "" });
-    setIsAddDialogOpen(false);
-    toast({
-      title: "Item adicionado",
-      description: `${product.nome} foi adicionado ao estoque.`,
     });
-  };
 
-  const totalValue = products.reduce(
-    (acc, product) => acc + product.preco * product.quantidade,
-    0
-  );
+    setNewProduct({ name: "", quantity: "", unit: "" });
+    setIsAddDialogOpen(false);
+  };
 
   const actions = (
     <>
@@ -156,12 +123,13 @@ export default function LanchonetePreparos() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="price">Preço (R$)</Label>
+                <Label htmlFor="quantity">Quantidade</Label>
                 <Input
-                  id="price"
-                  placeholder="Ex: 25,00"
-                  value={newProduct.price}
-                  onChange={(e) => setNewProduct((prev) => ({ ...prev, price: e.target.value }))}
+                  id="quantity"
+                  type="number"
+                  placeholder="Ex: 10"
+                  value={newProduct.quantity}
+                  onChange={(e) => setNewProduct((prev) => ({ ...prev, quantity: e.target.value }))}
                 />
               </div>
               <div className="space-y-2">
@@ -174,17 +142,8 @@ export default function LanchonetePreparos() {
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="quantity">Quantidade Inicial</Label>
-              <Input
-                id="quantity"
-                type="number"
-                placeholder="Ex: 10"
-                value={newProduct.quantity}
-                onChange={(e) => setNewProduct((prev) => ({ ...prev, quantity: e.target.value }))}
-              />
-            </div>
-            <Button onClick={handleAddProduct} className="w-full mt-4">
+            <Button onClick={handleAddProduct} className="w-full mt-4" disabled={addItem.isPending}>
+              {addItem.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Adicionar Item
             </Button>
           </div>
@@ -202,6 +161,16 @@ export default function LanchonetePreparos() {
     </>
   );
 
+  if (isLoading) {
+    return (
+      <AdminLayout title="Itens de Preparo" description="Gerencie os insumos e itens de preparo">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </AdminLayout>
+    );
+  }
+
   return (
     <AdminLayout
       title="Itens de Preparo"
@@ -213,73 +182,61 @@ export default function LanchonetePreparos() {
         <CardHeader className="border-b border-border/50 py-3 sm:py-4">
           <CardTitle className="flex items-center gap-2 text-base sm:text-lg font-semibold">
             <Package className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-            Itens em Estoque
+            Itens em Estoque ({itens.length})
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="divide-y divide-border/50">
-            {products.map((product) => (
-              <div
-                key={product.id}
-                className="flex items-center justify-between p-3 sm:p-4 hover:bg-muted/30 transition-colors"
-              >
-                <div className="flex-1 min-w-0 mr-2">
-                  <h3 className="font-medium text-foreground truncate text-sm sm:text-base">
-                    {product.nome}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-muted-foreground">
-                    R$ {product.preco.toFixed(2).replace(".", ",")} / {product.unidade}
-                  </p>
-                </div>
+          {itens.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">
+              Nenhum item cadastrado. Adicione seu primeiro item!
+            </div>
+          ) : (
+            <div className="divide-y divide-border/50">
+              {itens.map((product) => (
+                <div
+                  key={product.id}
+                  className="flex items-center justify-between p-3 sm:p-4 hover:bg-muted/30 transition-colors"
+                >
+                  <div className="flex-1 min-w-0 mr-2">
+                    <h3 className="font-medium text-foreground truncate text-sm sm:text-base">
+                      {product.nome}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      {product.unidade}
+                    </p>
+                  </div>
 
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-7 w-7 sm:h-8 sm:w-8 border-border/50 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50"
-                    onClick={() => handleQuantityChange(product.id, -1)}
-                  >
-                    <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
-                  </Button>
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-7 w-7 sm:h-8 sm:w-8 border-border/50 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50"
+                      onClick={() => handleQuantityChange(product.id, product.quantidade, -1)}
+                      disabled={updateQuantidade.isPending}
+                    >
+                      <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
+                    </Button>
 
-                  <span className={`w-8 sm:w-12 text-center font-semibold tabular-nums text-sm sm:text-base ${
-                    product.quantidade <= 5 ? "text-destructive" : "text-foreground"
-                  }`}>
-                    {product.quantidade}
-                  </span>
-
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-7 w-7 sm:h-8 sm:w-8 border-border/50 hover:bg-accent/50 hover:text-accent-foreground hover:border-accent/50"
-                    onClick={() => handleQuantityChange(product.id, 1)}
-                  >
-                    <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
-                  </Button>
-
-                  <div className="w-16 sm:w-24 text-right">
-                    <span className="font-medium text-foreground text-sm sm:text-base">
-                      R$ {(product.preco * product.quantidade).toFixed(2).replace(".", ",")}
+                    <span className={`w-8 sm:w-12 text-center font-semibold tabular-nums text-sm sm:text-base ${
+                      product.quantidade <= (product.estoque_minimo || 5) ? "text-destructive" : "text-foreground"
+                    }`}>
+                      {product.quantidade}
                     </span>
+
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-7 w-7 sm:h-8 sm:w-8 border-border/50 hover:bg-accent/50 hover:text-accent-foreground hover:border-accent/50"
+                      onClick={() => handleQuantityChange(product.id, product.quantidade, 1)}
+                      disabled={updateQuantidade.isPending}
+                    >
+                      <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+                    </Button>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Total */}
-      <Card className="mt-4 sm:mt-6 border-primary/30 bg-primary/5">
-        <CardContent className="p-3 sm:p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-base sm:text-lg font-semibold text-foreground">
-              Valor Total
-            </span>
-            <span className="text-xl sm:text-2xl font-bold text-primary">
-              R$ {totalValue.toFixed(2).replace(".", ",")}
-            </span>
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

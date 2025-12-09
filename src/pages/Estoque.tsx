@@ -12,13 +12,20 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ScanLine, Plus, Minus, Package, PlusCircle } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ScanLine, Plus, Minus, Package, PlusCircle, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { ProdutoEstoque } from "@/types/estoque";
-import { produtosEstoqueQuadra } from "@/data/estoqueData";
+import { useEstoque } from "@/hooks/useEstoque";
 import { QRCodeScanner } from "@/components/QRCodeScanner";
 import { ScannedProductsConfirmation } from "@/components/ScannedProductsConfirmation";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { CATEGORIAS_ESTOQUE_QUADRA } from "@/types/estoque";
 
 interface ScannedProduct {
   nome: string;
@@ -28,24 +35,17 @@ interface ScannedProduct {
 }
 
 export default function Estoque() {
-  const [products, setProducts] = useState<ProdutoEstoque[]>(produtosEstoqueQuadra);
+  const { produtos, isLoading, addProduto, updateQuantidade } = useEstoque();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
   const [scannedProducts, setScannedProducts] = useState<ScannedProduct[]>([]);
-  const [newProduct, setNewProduct] = useState({ name: "", price: "", quantity: "" });
+  const [newProduct, setNewProduct] = useState({ name: "", price: "", quantity: "", categoria: "" });
   const isMobile = useIsMobile();
 
-  const handleQuantityChange = (id: string, delta: number) => {
-    setProducts((prev) =>
-      prev.map((product) => {
-        if (product.id === id) {
-          const newQuantity = Math.max(0, product.quantidade + delta);
-          return { ...product, quantidade: newQuantity, updated_at: new Date() };
-        }
-        return product;
-      })
-    );
+  const handleQuantityChange = (id: string, currentQty: number, delta: number) => {
+    const newQuantity = Math.max(0, currentQty + delta);
+    updateQuantidade.mutate({ id, quantidade: newQuantity });
   };
 
   const handleScanInvoice = () => {
@@ -65,26 +65,20 @@ export default function Estoque() {
   };
 
   const handleConfirmProducts = (confirmedProducts: ScannedProduct[]) => {
-    const newProducts: ProdutoEstoque[] = confirmedProducts.map((p, index) => ({
-      id: `scanned-${Date.now()}-${index}`,
-      nome: p.nome,
-      preco: p.preco,
-      quantidade: Math.round(p.quantidade), // Sempre arredondar para inteiro no estoque
-      is_active: true,
-      created_at: new Date(),
-      updated_at: new Date(),
-    }));
-
-    setProducts((prev) => [...prev, ...newProducts]);
-    setScannedProducts([]);
-    toast({
-      title: "Produtos adicionados!",
-      description: `${newProducts.length} produtos foram adicionados ao estoque.`,
+    confirmedProducts.forEach((p) => {
+      addProduto.mutate({
+        nome: p.nome,
+        preco: p.preco,
+        quantidade: Math.round(p.quantidade),
+        categoria: "Outros",
+        is_active: true,
+      });
     });
+    setScannedProducts([]);
   };
 
   const handleAddProduct = () => {
-    if (!newProduct.name.trim() || !newProduct.price || !newProduct.quantity) {
+    if (!newProduct.name.trim() || !newProduct.price || !newProduct.quantity || !newProduct.categoria) {
       toast({
         title: "Campos obrigatórios",
         description: "Preencha todos os campos para adicionar o produto.",
@@ -93,27 +87,20 @@ export default function Estoque() {
       return;
     }
 
-    const product: ProdutoEstoque = {
-      id: `prod-${Date.now()}`,
+    addProduto.mutate({
       nome: newProduct.name.trim(),
       preco: parseFloat(newProduct.price.replace(",", ".")),
       quantidade: parseInt(newProduct.quantity),
+      categoria: newProduct.categoria,
       is_active: true,
-      created_at: new Date(),
-      updated_at: new Date(),
-    };
-
-    setProducts((prev) => [...prev, product]);
-    setNewProduct({ name: "", price: "", quantity: "" });
-    setIsAddDialogOpen(false);
-    toast({
-      title: "Produto adicionado",
-      description: `${product.nome} foi adicionado ao estoque.`,
     });
+    
+    setNewProduct({ name: "", price: "", quantity: "", categoria: "" });
+    setIsAddDialogOpen(false);
   };
 
-  const totalValue = products.reduce(
-    (acc, product) => acc + product.preco * product.quantidade,
+  const totalValue = produtos.reduce(
+    (acc, product) => acc + Number(product.preco) * product.quantidade,
     0
   );
 
@@ -143,6 +130,24 @@ export default function Estoque() {
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="categoria">Categoria</Label>
+              <Select
+                value={newProduct.categoria}
+                onValueChange={(value) => setNewProduct((prev) => ({ ...prev, categoria: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIAS_ESTOQUE_QUADRA.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="price">Preço (R$)</Label>
               <Input
                 id="price"
@@ -161,7 +166,8 @@ export default function Estoque() {
                 onChange={(e) => setNewProduct((prev) => ({ ...prev, quantity: e.target.value }))}
               />
             </div>
-            <Button onClick={handleAddProduct} className="w-full mt-4">
+            <Button onClick={handleAddProduct} className="w-full mt-4" disabled={addProduto.isPending}>
+              {addProduto.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Adicionar Produto
             </Button>
           </div>
@@ -179,6 +185,16 @@ export default function Estoque() {
     </>
   );
 
+  if (isLoading) {
+    return (
+      <AdminLayout title="Estoque" description="Gerencie os produtos do seu estoque">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </AdminLayout>
+    );
+  }
+
   return (
     <AdminLayout
       title="Estoque"
@@ -190,57 +206,66 @@ export default function Estoque() {
         <CardHeader className="border-b border-border/50">
           <CardTitle className="flex items-center gap-2 text-lg font-semibold">
             <Package className="h-5 w-5 text-primary" />
-            Produtos em Estoque
+            Produtos em Estoque ({produtos.length})
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="divide-y divide-border/50">
-            {products.map((product) => (
-              <div
-                key={product.id}
-                className="flex items-center justify-between p-3 sm:p-4 hover:bg-muted/30 transition-colors"
-              >
-                <div className="flex-1 min-w-0 mr-2">
-                  <h3 className="font-medium text-foreground truncate text-sm sm:text-base">
-                    {product.nome}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-muted-foreground">
-                    R$ {product.preco.toFixed(2).replace(".", ",")} / unidade
-                  </p>
-                </div>
+          {produtos.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">
+              Nenhum produto cadastrado. Adicione seu primeiro produto!
+            </div>
+          ) : (
+            <div className="divide-y divide-border/50">
+              {produtos.map((product) => (
+                <div
+                  key={product.id}
+                  className="flex items-center justify-between p-3 sm:p-4 hover:bg-muted/30 transition-colors"
+                >
+                  <div className="flex-1 min-w-0 mr-2">
+                    <h3 className="font-medium text-foreground truncate text-sm sm:text-base">
+                      {product.nome}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      R$ {Number(product.preco).toFixed(2).replace(".", ",")} / unidade
+                      {product.categoria && <span className="ml-2 text-primary/70">• {product.categoria}</span>}
+                    </p>
+                  </div>
 
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-7 w-7 sm:h-8 sm:w-8 border-border/50 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50"
-                    onClick={() => handleQuantityChange(product.id, -1)}
-                  >
-                    <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
-                  </Button>
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-7 w-7 sm:h-8 sm:w-8 border-border/50 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50"
+                      onClick={() => handleQuantityChange(product.id, product.quantidade, -1)}
+                      disabled={updateQuantidade.isPending}
+                    >
+                      <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
+                    </Button>
 
-                  <span className="w-8 sm:w-12 text-center font-semibold text-foreground tabular-nums text-sm sm:text-base">
-                    {product.quantidade}
-                  </span>
-
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-7 w-7 sm:h-8 sm:w-8 border-border/50 hover:bg-accent/50 hover:text-accent-foreground hover:border-accent/50"
-                    onClick={() => handleQuantityChange(product.id, 1)}
-                  >
-                    <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
-                  </Button>
-
-                  <div className="w-20 sm:w-28 text-right">
-                    <span className="font-medium text-foreground text-sm sm:text-base">
-                      R$ {(product.preco * product.quantidade).toFixed(2).replace(".", ",")}
+                    <span className="w-8 sm:w-12 text-center font-semibold text-foreground tabular-nums text-sm sm:text-base">
+                      {product.quantidade}
                     </span>
+
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-7 w-7 sm:h-8 sm:w-8 border-border/50 hover:bg-accent/50 hover:text-accent-foreground hover:border-accent/50"
+                      onClick={() => handleQuantityChange(product.id, product.quantidade, 1)}
+                      disabled={updateQuantidade.isPending}
+                    >
+                      <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+                    </Button>
+
+                    <div className="w-20 sm:w-28 text-right">
+                      <span className="font-medium text-foreground text-sm sm:text-base">
+                        R$ {(Number(product.preco) * product.quantidade).toFixed(2).replace(".", ",")}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* Total */}
           <div className="border-t-2 border-primary/30 bg-primary/5 p-3 sm:p-4">
