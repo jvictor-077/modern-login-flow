@@ -35,9 +35,6 @@ import {
   getValidTimesForDay,
   isTimeValidForDay,
   checkTimeConflict,
-  checkRecurringConflict,
-  addRecurringClass,
-  getPrice,
   calculateEndTime,
   getCourtId,
 } from "@/services/bookingService";
@@ -75,7 +72,7 @@ export function NewBookingModal({ onBookingAdded }: NewBookingModalProps) {
     setSingleTime("");
   };
 
-  const handleSaveRecurring = () => {
+  const handleSaveRecurring = async () => {
     if (!classType || selectedDays.length === 0 || !recurringTime) {
       toast({
         variant: "destructive",
@@ -96,35 +93,50 @@ export function NewBookingModal({ onBookingAdded }: NewBookingModalProps) {
       return;
     }
 
-    // Verifica conflitos
-    const conflict = checkRecurringConflict(selectedDays, recurringTime, courtId);
-    if (conflict.hasConflict) {
-      const dayLabel = DAYS_OF_WEEK.find(d => d.value === conflict.conflictDay)?.label;
+    setIsSubmitting(true);
+
+    try {
+      const horarioFim = calculateEndTime(recurringTime, 1);
+
+      // Inserir uma aula para cada dia da semana selecionado
+      const aulasParaInserir = selectedDays.map(dia => ({
+        modalidade: classType,
+        professor: "A definir", // Campo obrigatório na tabela
+        dia_semana: dia,
+        horario_inicio: recurringTime,
+        horario_fim: horarioFim,
+        max_alunos: 8,
+      }));
+
+      const { error } = await supabase
+        .from("aulas_recorrentes")
+        .insert(aulasParaInserir);
+
+      if (error) {
+        throw new Error("Erro ao salvar aula: " + error.message);
+      }
+
+      // Invalidar queries para atualizar a grade
+      await queryClient.invalidateQueries({ queryKey: ["aulas-recorrentes"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+
+      toast({
+        title: "Aula mensal criada!",
+        description: `${classType} agendado para ${selectedDays.length} dia(s) da semana.`,
+      });
+      resetForm();
+      setOpen(false);
+      onBookingAdded?.();
+    } catch (error) {
+      console.error("Erro ao salvar aula recorrente:", error);
       toast({
         variant: "destructive",
-        title: "Conflito de horário",
-        description: `Já existe ${conflict.conflictLabel} às ${recurringTime} na ${dayLabel}.`,
+        title: "Erro ao salvar",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
       });
-      return;
+    } finally {
+      setIsSubmitting(false);
     }
-
-    // Adiciona a aula
-    addRecurringClass({
-      court_id: courtId,
-      class_type: classType,
-      days_of_week: selectedDays,
-      start_time: recurringTime,
-      end_time: calculateEndTime(recurringTime, 1),
-      is_active: true,
-    });
-
-    toast({
-      title: "Aula mensal criada!",
-      description: `${classType} agendado com sucesso.`,
-    });
-    resetForm();
-    setOpen(false);
-    onBookingAdded?.();
   };
 
   const handleSaveSingle = async () => {
@@ -324,8 +336,12 @@ export function NewBookingModal({ onBookingAdded }: NewBookingModalProps) {
               </Select>
             </div>
 
-            <Button onClick={handleSaveRecurring} className="w-full mt-4">
-              Salvar Aula Mensal
+            <Button 
+              onClick={handleSaveRecurring} 
+              className="w-full mt-4"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Salvando..." : "Salvar Aula Mensal"}
             </Button>
           </TabsContent>
 
