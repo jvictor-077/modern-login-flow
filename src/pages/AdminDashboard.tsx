@@ -103,7 +103,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Mobile Action Button */}
-            <div className="lg:hidden mb-4">
+            <div className="lg:hidden mb-4 flex justify-center">
               <NewBookingModal onBookingAdded={handleBookingAdded} />
             </div>
 
