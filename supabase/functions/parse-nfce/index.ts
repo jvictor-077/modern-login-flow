@@ -55,21 +55,31 @@ serve(async (req) => {
     // Parse products from the HTML
     const products: ScannedProduct[] = [];
     
-    // Match pattern: <span class="txtTit">PRODUCT NAME</span>
-    // followed by Qtde.: X, UN: Y, Vl. Unit.: Z
-    const productRegex = /<span class="txtTit">([^<]+)<\/span>[\s\S]*?<span class="Rqtd">[^:]*:\s*<\/strong>([^<]+)<\/span>\s*<span class="RUN">[^:]*:\s*<\/strong>([^<]+)<\/span>\s*<span class="RvlUnit">[^:]*:\s*<\/strong>([^<]+)<\/span>/g;
+    // Structure: <span class="txtTit">NAME</span>...<span class="Rqtd"><strong>Qtde.: </strong>QTD</span><span class="RUN"><strong>UN: </strong>UNIT</span><span class="RvlUnit"><strong>Vl. Unit.: </strong>PRICE</span>
     
-    let match;
-    while ((match = productRegex.exec(html)) !== null) {
-      const nome = match[1].trim();
-      const quantidadeStr = match[2].trim().replace(',', '.');
-      const unidade = match[3].trim();
-      const precoStr = match[4].trim().replace(',', '.');
+    // First, find all product rows in the table
+    const rowRegex = /<tr[^>]*>[\s\S]*?<span class="txtTit">([^<]+)<\/span>[\s\S]*?<\/tr>/gi;
+    let rowMatch;
+    
+    while ((rowMatch = rowRegex.exec(html)) !== null) {
+      const rowHtml = rowMatch[0];
+      const nome = rowMatch[1].trim();
       
-      const quantidade = parseFloat(quantidadeStr) || 1;
-      const preco = parseFloat(precoStr) || 0;
+      // Extract quantity: <span class="Rqtd"><strong>Qtde.: </strong>VALUE</span>
+      const qtdMatch = rowHtml.match(/<span class="Rqtd"><strong>Qtde\.: <\/strong>([^<]+)<\/span>/i);
+      // Extract unit: <span class="RUN"><strong>UN: </strong>VALUE</span>
+      const unMatch = rowHtml.match(/<span class="RUN"><strong>UN: <\/strong>([^<]+)<\/span>/i);
+      // Extract price: <span class="RvlUnit"><strong>Vl. Unit.: </strong>VALUE</span>
+      const precoMatch = rowHtml.match(/<span class="RvlUnit"><strong>Vl\. Unit\.: <\/strong>([^<]+)<\/span>/i);
       
-      if (nome) {
+      if (nome && qtdMatch && precoMatch) {
+        const quantidadeStr = qtdMatch[1].trim().replace(',', '.');
+        const unidade = unMatch ? unMatch[1].trim() : 'UN';
+        const precoStr = precoMatch[1].trim().replace(',', '.');
+        
+        const quantidade = parseFloat(quantidadeStr) || 1;
+        const preco = parseFloat(precoStr) || 0;
+        
         products.push({ nome, quantidade, preco, unidade });
         console.log('Produto encontrado:', nome, quantidade, unidade, preco);
       }
@@ -77,24 +87,46 @@ serve(async (req) => {
 
     console.log('Total de produtos encontrados:', products.length);
 
+    // If no products found with first method, try alternative approach
     if (products.length === 0) {
-      // Try alternative parsing for different HTML structures
-      const altRegex = /<tr[^>]*>[\s\S]*?class="txtTit"[^>]*>([^<]+)<[\s\S]*?Qtde\.?:?\s*<\/strong>\s*([0-9,\.]+)[\s\S]*?UN:?\s*<\/strong>\s*(\w+)[\s\S]*?Vl\.?\s*Unit\.?:?\s*<\/strong>\s*([0-9,\.]+)/gi;
+      console.log('Tentando método alternativo de parsing...');
       
-      while ((match = altRegex.exec(html)) !== null) {
-        const nome = match[1].trim();
-        const quantidadeStr = match[2].trim().replace(',', '.');
-        const unidade = match[3].trim();
-        const precoStr = match[4].trim().replace(',', '.');
+      // Find all txtTit spans and extract data from surrounding context
+      const txtTitRegex = /<span class="txtTit">([^<]+)<\/span>/gi;
+      let txtMatch;
+      let lastIndex = 0;
+      
+      while ((txtMatch = txtTitRegex.exec(html)) !== null) {
+        const nome = txtMatch[1].trim();
+        const startPos = txtMatch.index;
         
-        const quantidade = parseFloat(quantidadeStr) || 1;
-        const preco = parseFloat(precoStr) || 0;
+        // Get the next 500 characters to find the product details
+        const context = html.substring(startPos, startPos + 500);
         
-        if (nome && !products.some(p => p.nome === nome)) {
-          products.push({ nome, quantidade, preco, unidade });
-          console.log('Produto (alt) encontrado:', nome, quantidade, unidade, preco);
+        // Look for quantity, unit and price in the context
+        const qtdMatch = context.match(/Qtde\.?:?\s*<\/strong>\s*([0-9,\.]+)/i);
+        const unMatch = context.match(/UN:?\s*<\/strong>\s*([A-Z]+)/i);
+        const precoMatch = context.match(/Vl\.?\s*Unit\.?:?\s*<\/strong>\s*([0-9,\.]+)/i);
+        
+        if (nome && qtdMatch && precoMatch) {
+          const quantidadeStr = qtdMatch[1].trim().replace(',', '.');
+          const unidade = unMatch ? unMatch[1].trim() : 'UN';
+          const precoStr = precoMatch[1].trim().replace(',', '.');
+          
+          const quantidade = parseFloat(quantidadeStr) || 1;
+          const preco = parseFloat(precoStr) || 0;
+          
+          // Avoid duplicates
+          if (!products.some(p => p.nome === nome && p.quantidade === quantidade)) {
+            products.push({ nome, quantidade, preco, unidade });
+            console.log('Produto (alt) encontrado:', nome, quantidade, unidade, preco);
+          }
         }
+        
+        lastIndex = txtMatch.index + txtMatch[0].length;
       }
+      
+      console.log('Total de produtos (método alt):', products.length);
     }
 
     return new Response(
