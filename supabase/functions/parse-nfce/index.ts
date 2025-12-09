@@ -28,54 +28,57 @@ serve(async (req) => {
       );
     }
 
-    console.log('Buscando nota fiscal:', url);
+    console.log('Buscando:', url);
 
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept': 'text/html',
       },
     });
 
     if (!response.ok) {
-      console.error('Erro HTTP:', response.status);
       return new Response(
-        JSON.stringify({ success: false, error: `Erro HTTP: ${response.status}` }),
+        JSON.stringify({ success: false, error: `HTTP ${response.status}` }),
         { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const html = await response.text();
-    console.log('HTML tamanho:', html.length);
-    
-    // Log a sample of the HTML for debugging
-    const sampleStart = html.indexOf('txtTit');
-    if (sampleStart > -1) {
-      console.log('Sample HTML:', html.substring(sampleStart - 20, sampleStart + 200));
-    }
+    console.log('HTML recebido:', html.length, 'bytes');
 
     const products: ScannedProduct[] = [];
     
-    // Split by table rows
-    const rows = html.split(/<tr[^>]*>/i);
-    console.log('Rows found:', rows.length);
+    // Regex para extrair cada produto
+    // Estrutura: <span class="txtTit">NOME</span>...<span class="Rqtd"><strong>Qtde.: </strong>QTD</span><span class="RUN"><strong>UN: </strong>UN</span><span class="RvlUnit"><strong>Vl. Unit.: </strong>PRECO</span>
     
-    for (const row of rows) {
-      // Find product name
-      const nomeMatch = row.match(/class="txtTit"[^>]*>([^<]+)</i);
-      if (!nomeMatch) continue;
+    // Encontrar todos os nomes de produtos
+    const nomeRegex = /<span class="txtTit">([^<]+)<\/span>/g;
+    let nomeMatch;
+    const nomes: {nome: string, index: number}[] = [];
+    
+    while ((nomeMatch = nomeRegex.exec(html)) !== null) {
+      // Ignorar spans com classe "txtTit noWrap" (são os totais)
+      const before = html.substring(Math.max(0, nomeMatch.index - 30), nomeMatch.index);
+      if (!before.includes('noWrap')) {
+        nomes.push({ nome: nomeMatch[1].trim(), index: nomeMatch.index });
+      }
+    }
+    
+    console.log('Nomes encontrados:', nomes.length);
+    
+    // Para cada nome, encontrar qtd, un e preco no contexto seguinte
+    for (let i = 0; i < nomes.length; i++) {
+      const { nome, index } = nomes[i];
+      const endIndex = i < nomes.length - 1 ? nomes[i + 1].index : index + 600;
+      const context = html.substring(index, endIndex);
       
-      const nome = nomeMatch[1].trim();
-      if (!nome) continue;
-      
-      // Find quantity - look for number after "Qtde.:" 
-      const qtdMatch = row.match(/Qtde\.?:?\s*<\/strong>\s*([0-9]+[,.]?[0-9]*)/i);
-      // Find unit - look for letters after "UN:"
-      const unMatch = row.match(/UN:?\s*<\/strong>\s*([A-Z]+)/i);
-      // Find price - look for number after "Vl. Unit.:"
-      const precoMatch = row.match(/Vl\.?\s*Unit\.?:?\s*<\/strong>\s*([0-9]+[,.]?[0-9]*)/i);
-      
-      console.log(`Parsing "${nome}": qtd=${qtdMatch?.[1]}, un=${unMatch?.[1]}, preco=${precoMatch?.[1]}`);
+      // Extrair quantidade: <span class="Rqtd"><strong>Qtde.: </strong>VALUE</span>
+      const qtdMatch = context.match(/<span class="Rqtd"><strong>Qtde\.: <\/strong>([^<]+)<\/span>/);
+      // Extrair unidade: <span class="RUN"><strong>UN: </strong>VALUE</span>
+      const unMatch = context.match(/<span class="RUN"><strong>UN: <\/strong>([^<]+)<\/span>/);
+      // Extrair preço: <span class="RvlUnit"><strong>Vl. Unit.: </strong>VALUE</span>
+      const precoMatch = context.match(/<span class="RvlUnit"><strong>Vl\. Unit\.: <\/strong>([^<]+)<\/span>/);
       
       if (qtdMatch && precoMatch) {
         const quantidade = parseFloat(qtdMatch[1].replace(',', '.')) || 1;
@@ -83,11 +86,13 @@ serve(async (req) => {
         const preco = parseFloat(precoMatch[1].replace(',', '.')) || 0;
         
         products.push({ nome, quantidade, preco, unidade });
-        console.log('Produto adicionado:', nome);
+        console.log('OK:', nome, quantidade, unidade, preco);
+      } else {
+        console.log('FALHA:', nome, 'qtd:', !!qtdMatch, 'preco:', !!precoMatch);
       }
     }
 
-    console.log('Total produtos:', products.length);
+    console.log('Total:', products.length);
 
     return new Response(
       JSON.stringify({ success: true, products }),
@@ -96,9 +101,8 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Erro:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
     return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
+      JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Erro' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
