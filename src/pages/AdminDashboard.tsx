@@ -7,17 +7,21 @@ import { TimeSlotGrid } from "@/components/admin/TimeSlotGrid";
 import { NewBookingModal } from "@/components/admin/NewBookingModal";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarDays, Users, Clock, TrendingUp, Loader2 } from "lucide-react";
+import { CalendarDays, Users, Clock, TrendingUp } from "lucide-react";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function AdminDashboard() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [refreshKey, setRefreshKey] = useState(0);
   const { data: statsData, isLoading: isLoadingStats } = useDashboardStats();
+  const queryClient = useQueryClient();
 
-  const handleBookingAdded = () => {
-    setRefreshKey(prev => prev + 1);
+  const handleBookingAdded = async () => {
+    // Invalidar todas as queries relacionadas a reservas
+    await queryClient.invalidateQueries({ queryKey: ["reservas-do-dia"] });
+    await queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+    await queryClient.invalidateQueries({ queryKey: ["aulas-recorrentes"] });
   };
 
   const stats = [
@@ -131,7 +135,7 @@ export default function AdminDashboard() {
               {/* Time Slots Section */}
               <Card className="bg-card/50 border-border/50 backdrop-blur-sm">
                 <CardContent className="p-6 h-full">
-                  <TimeSlotGrid key={refreshKey} selectedDate={selectedDate} />
+                  <TimeSlotGrid selectedDate={selectedDate} />
                 </CardContent>
               </Card>
             </div>
