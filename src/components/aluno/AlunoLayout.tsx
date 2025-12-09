@@ -3,19 +3,32 @@ import { AlunoSidebar } from "./AlunoSidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Bell } from "lucide-react";
+import { useAlunoSession } from "@/hooks/useAlunoSession";
+import { Navigate } from "react-router-dom";
 
 interface AlunoLayoutProps {
   children: React.ReactNode;
 }
 
-// Dados mockados do aluno
-const alunoData = {
-  nome: "João Silva",
-  email: "joao@email.com",
-  avatar: "JS",
-};
-
 export function AlunoLayout({ children }: AlunoLayoutProps) {
+  const { aluno, loading, isLoggedIn } = useAlunoSession();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isLoggedIn) {
+    return <Navigate to="/" replace />;
+  }
+
+  const getInitials = (nome: string) => {
+    return nome.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+  };
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
@@ -38,12 +51,12 @@ export function AlunoLayout({ children }: AlunoLayoutProps) {
                 <div className="flex items-center gap-2 sm:gap-3">
                   <Avatar className="h-8 w-8 sm:h-9 sm:w-9">
                     <AvatarFallback className="bg-primary/20 text-primary font-medium text-xs sm:text-sm">
-                      {alunoData.avatar}
+                      {aluno ? getInitials(aluno.nome) : '??'}
                     </AvatarFallback>
                   </Avatar>
                   <div className="hidden sm:block">
-                    <p className="text-sm font-medium">{alunoData.nome}</p>
-                    <p className="text-xs text-muted-foreground">{alunoData.email}</p>
+                    <p className="text-sm font-medium">{aluno?.nome}</p>
+                    <p className="text-xs text-muted-foreground">{aluno?.email}</p>
                   </div>
                 </div>
               </div>
