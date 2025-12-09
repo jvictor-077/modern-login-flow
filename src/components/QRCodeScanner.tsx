@@ -41,36 +41,6 @@ export function QRCodeScanner({ open, onClose, onProductsScanned }: QRCodeScanne
     }
   }, []);
 
-  const parseNFCeProducts = (html: string): ScannedProduct[] => {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    const products: ScannedProduct[] = [];
-    
-    const rows = doc.querySelectorAll('#tabResult tbody tr');
-    
-    rows.forEach((row) => {
-      const nomeEl = row.querySelector('.txtTit');
-      const qtdEl = row.querySelector('.Rqtd');
-      const unEl = row.querySelector('.RUN');
-      const vlUnitEl = row.querySelector('.RvlUnit');
-      
-      if (nomeEl && qtdEl && vlUnitEl) {
-        const nome = nomeEl.textContent?.trim() || '';
-        const qtdText = qtdEl.textContent?.replace('Qtde.:', '').trim() || '1';
-        const quantidade = parseFloat(qtdText.replace(',', '.')) || 1;
-        const unidade = unEl?.textContent?.replace('UN:', '').trim() || 'UN';
-        const precoText = vlUnitEl.textContent?.replace('Vl. Unit.:', '').trim() || '0';
-        const preco = parseFloat(precoText.replace(',', '.')) || 0;
-        
-        if (nome) {
-          products.push({ nome, quantidade, preco, unidade });
-        }
-      }
-    });
-    
-    return products;
-  };
-
   // Validates that a URL is from an official Brazilian SEFAZ domain
   const isValidSefazUrl = (url: string): boolean => {
     try {
@@ -115,66 +85,41 @@ export function QRCodeScanner({ open, onClose, onProductsScanned }: QRCodeScanne
     setIsLoading(true);
     
     toast({
-      title: "Nota fiscal detectada",
-      description: "Buscando produtos...",
+      title: "Nota fiscal detectada!",
+      description: "Abrindo nota em nova aba e carregando produtos de exemplo...",
     });
 
-    try {
-      // Try to fetch the NFC-e page
-      // Note: Due to CORS, this may not work directly. In production, use a backend proxy.
-      const response = await fetch(url, { 
-        mode: 'cors',
-        headers: { 'Accept': 'text/html' }
-      });
-      
-      if (response.ok) {
-        const html = await response.text();
-        const products = parseNFCeProducts(html);
-        
-        if (products.length > 0) {
-          toast({
-            title: "Produtos encontrados!",
-            description: `${products.length} produtos identificados.`,
-          });
-          onProductsScanned(products);
-        } else {
-          toast({
-            title: "Nenhum produto encontrado",
-            description: "Não foi possível extrair produtos da nota.",
-            variant: "destructive",
-          });
-        }
-      } else {
-        throw new Error("Falha ao buscar nota fiscal");
-      }
-    } catch (error) {
-      console.log("CORS blocked, using simulated data");
-      // Fallback: simulate products based on real NFC-e structure
-      const simulatedProducts: ScannedProduct[] = [
-        { nome: "LING AURORA kg CHUR", quantidade: 0.51, preco: 16.98, unidade: "KG" },
-        { nome: "MASSA PRONTA TAPIOCA TIA DORA 1kg", quantidade: 1, preco: 6.28, unidade: "UN" },
-        { nome: "ALHO GRANEL kg", quantidade: 0.07, preco: 13.80, unidade: "KG" },
-        { nome: "EXT TOM POMODORO TP 265G", quantidade: 1, preco: 2.38, unidade: "UN" },
-        { nome: "PALETA SUINA RESF kg", quantidade: 0.368, preco: 19.48, unidade: "KG" },
-        { nome: "FILEZINHO FGO CONG AURORA BD1kg", quantidade: 1, preco: 23.48, unidade: "BD" },
-        { nome: "ARROZ BR TIO URBANO 1kg", quantidade: 2, preco: 4.68, unidade: "UN" },
-        { nome: "TOMATE SALADETE kg", quantidade: 0.93, preco: 5.48, unidade: "KG" },
-        { nome: "SAB SENADOR 130G COUNTRY", quantidade: 1, preco: 7.25, unidade: "UN" },
-        { nome: "COENTRO UN", quantidade: 1, preco: 2.98, unidade: "UN" },
-        { nome: "FOSFORO HOME FIAT LUX", quantidade: 1, preco: 5.18, unidade: "UN" },
-      ];
-      
+    // Open the SEFAZ URL in a new tab so user can view the actual invoice
+    window.open(url, '_blank', 'noopener,noreferrer');
+
+    // Since CORS blocks direct access to SEFAZ websites from browser,
+    // we use demonstration products. In production, use a backend proxy/edge function.
+    const demoProducts: ScannedProduct[] = [
+      { nome: "LING AURORA kg CHUR", quantidade: 0.51, preco: 16.98, unidade: "KG" },
+      { nome: "MASSA PRONTA TAPIOCA TIA DORA 1kg", quantidade: 1, preco: 6.28, unidade: "UN" },
+      { nome: "ALHO GRANEL kg", quantidade: 0.07, preco: 13.80, unidade: "KG" },
+      { nome: "EXT TOM POMODORO TP 265G", quantidade: 1, preco: 2.38, unidade: "UN" },
+      { nome: "PALETA SUINA RESF kg", quantidade: 0.368, preco: 19.48, unidade: "KG" },
+      { nome: "FILEZINHO FGO CONG AURORA BD1kg", quantidade: 1, preco: 23.48, unidade: "BD" },
+      { nome: "ARROZ BR TIO URBANO 1kg", quantidade: 2, preco: 4.68, unidade: "UN" },
+      { nome: "TOMATE SALADETE kg", quantidade: 0.93, preco: 5.48, unidade: "KG" },
+      { nome: "SAB SENADOR 130G COUNTRY", quantidade: 1, preco: 7.25, unidade: "UN" },
+      { nome: "COENTRO UN", quantidade: 1, preco: 2.98, unidade: "UN" },
+      { nome: "FOSFORO HOME FIAT LUX", quantidade: 1, preco: 5.18, unidade: "UN" },
+    ];
+    
+    // Short delay to allow new tab to open
+    setTimeout(() => {
       toast({
-        title: "Produtos encontrados!",
-        description: `${simulatedProducts.length} produtos identificados.`,
+        title: "Produtos carregados!",
+        description: `${demoProducts.length} produtos de demonstração. A nota fiscal foi aberta em nova aba.`,
       });
       
-      onProductsScanned(simulatedProducts);
-    } finally {
+      onProductsScanned(demoProducts);
       setIsLoading(false);
       isProcessingRef.current = false;
       onClose();
-    }
+    }, 500);
   }, [onProductsScanned, onClose, stopScanner]);
 
   const startScanner = useCallback(async () => {
