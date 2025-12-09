@@ -1,0 +1,1304 @@
+openapi: 3.0.3
+info:
+  title: Arena Sports Management API
+  description: API para gerenciamento de arena esportiva - alunos, reservas, aulas e cronogramas
+  version: 1.0.0
+  contact:
+    name: API Support
+
+servers:
+  - url: https://your-api-domain.com/api/v1
+    description: Production server
+
+tags:
+  - name: Auth
+    description: Autenticação e sessão
+  - name: Alunos
+    description: Gerenciamento de alunos
+  - name: Modalidades
+    description: Modalidades dos alunos
+  - name: Cronograma
+    description: Cronograma de aulas
+  - name: Aulas Recorrentes
+    description: Grade horária fixa
+  - name: Reservas
+    description: Reservas de quadra
+  - name: Perfil
+    description: Perfil do usuário logado
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # Enums
+    AppRole:
+      type: string
+      enum: [admin, aluno, lanchonete]
+      
+    SituacaoAluno:
+      type: string
+      enum: [em_dia, pendente, atrasado]
+      
+    StatusReserva:
+      type: string
+      enum: [pendente, confirmada, cancelada, concluida]
+      
+    PeriodoAula:
+      type: string
+      enum: [manhã, tarde, noite]
+
+    TipoSanguineo:
+      type: string
+      enum: ['A+', 'A-', 'AB+', 'AB-', 'B+', 'B-', 'O+', 'O-']
+
+    Modalidade:
+      type: string
+      enum: ['Beach Tennis', 'Vôlei Adulto Noite', 'Vôlei Adulto Manhã', 'Vôlei Teen', 'Futevôlei', 'Funcional']
+
+    Plano:
+      type: string
+      enum: ['Mensal', 'Trimestral', '1x por semana', '2x por semana', '3x por semana', 'Aula Avulsa']
+
+    # Main Schemas
+    Aluno:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+          nullable: true
+        nome:
+          type: string
+        email:
+          type: string
+          format: email
+        cpf:
+          type: string
+          nullable: true
+        celular:
+          type: string
+          nullable: true
+        data_nascimento:
+          type: string
+          format: date
+          nullable: true
+        endereco:
+          type: string
+          nullable: true
+        contato_emergencia:
+          type: string
+          nullable: true
+        tipo_sanguineo:
+          $ref: '#/components/schemas/TipoSanguineo'
+        doencas:
+          type: string
+          nullable: true
+        alergias:
+          type: string
+          nullable: true
+        observacoes:
+          type: string
+          nullable: true
+        autoriza_imagem:
+          type: boolean
+          default: false
+        situacao:
+          $ref: '#/components/schemas/SituacaoAluno'
+        pin:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - nome
+        - email
+        - situacao
+
+    AlunoCreate:
+      type: object
+      properties:
+        nome:
+          type: string
+          minLength: 2
+        email:
+          type: string
+          format: email
+        cpf:
+          type: string
+        celular:
+          type: string
+        data_nascimento:
+          type: string
+          format: date
+        endereco:
+          type: string
+        contato_emergencia:
+          type: string
+        tipo_sanguineo:
+          $ref: '#/components/schemas/TipoSanguineo'
+        doencas:
+          type: string
+        alergias:
+          type: string
+        observacoes:
+          type: string
+        autoriza_imagem:
+          type: boolean
+        modalidades:
+          type: array
+          items:
+            $ref: '#/components/schemas/AlunoModalidadeCreate'
+      required:
+        - nome
+        - email
+
+    AlunoUpdate:
+      type: object
+      properties:
+        nome:
+          type: string
+        celular:
+          type: string
+        endereco:
+          type: string
+        contato_emergencia:
+          type: string
+        tipo_sanguineo:
+          $ref: '#/components/schemas/TipoSanguineo'
+        doencas:
+          type: string
+        alergias:
+          type: string
+        observacoes:
+          type: string
+        autoriza_imagem:
+          type: boolean
+        situacao:
+          $ref: '#/components/schemas/SituacaoAluno'
+
+    AlunoModalidade:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        aluno_id:
+          type: string
+          format: uuid
+        modalidade:
+          $ref: '#/components/schemas/Modalidade'
+        plano:
+          $ref: '#/components/schemas/Plano'
+        valor:
+          type: number
+          format: float
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - aluno_id
+        - modalidade
+        - plano
+        - valor
+
+    AlunoModalidadeCreate:
+      type: object
+      properties:
+        modalidade:
+          $ref: '#/components/schemas/Modalidade'
+        plano:
+          $ref: '#/components/schemas/Plano'
+        valor:
+          type: number
+          format: float
+      required:
+        - modalidade
+        - plano
+        - valor
+
+    CronogramaAula:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        aluno_id:
+          type: string
+          format: uuid
+        modalidade:
+          type: string
+        dia_semana:
+          type: integer
+          minimum: 0
+          maximum: 6
+        dia_semana_label:
+          type: string
+        horario:
+          type: string
+          format: time
+        local:
+          type: string
+        professor:
+          type: string
+          nullable: true
+        periodo:
+          $ref: '#/components/schemas/PeriodoAula'
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - aluno_id
+        - modalidade
+        - dia_semana
+        - horario
+        - local
+        - periodo
+
+    CronogramaAulaCreate:
+      type: object
+      properties:
+        modalidade:
+          type: string
+        dia_semana:
+          type: integer
+          minimum: 0
+          maximum: 6
+        horario:
+          type: string
+          format: time
+        local:
+          type: string
+        professor:
+          type: string
+        periodo:
+          $ref: '#/components/schemas/PeriodoAula'
+      required:
+        - modalidade
+        - dia_semana
+        - horario
+        - local
+        - periodo
+
+    AulaRecorrente:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        modalidade:
+          type: string
+        professor:
+          type: string
+        dia_semana:
+          type: integer
+          minimum: 0
+          maximum: 6
+        dia_semana_label:
+          type: string
+        horario_inicio:
+          type: string
+          format: time
+        horario_fim:
+          type: string
+          format: time
+        max_alunos:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - modalidade
+        - professor
+        - dia_semana
+        - horario_inicio
+        - horario_fim
+
+    AulaRecorrenteCreate:
+      type: object
+      properties:
+        modalidade:
+          type: string
+        professor:
+          type: string
+        dia_semana:
+          type: integer
+          minimum: 0
+          maximum: 6
+        horario_inicio:
+          type: string
+          format: time
+        horario_fim:
+          type: string
+          format: time
+        max_alunos:
+          type: integer
+          default: 20
+      required:
+        - modalidade
+        - professor
+        - dia_semana
+        - horario_inicio
+        - horario_fim
+
+    Reserva:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        aluno_id:
+          type: string
+          format: uuid
+        aluno_nome:
+          type: string
+        data:
+          type: string
+          format: date
+        horario_inicio:
+          type: string
+          format: time
+        horario_fim:
+          type: string
+          format: time
+        status:
+          $ref: '#/components/schemas/StatusReserva'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - aluno_id
+        - data
+        - horario_inicio
+        - horario_fim
+        - status
+
+    ReservaCreate:
+      type: object
+      properties:
+        data:
+          type: string
+          format: date
+        horario_inicio:
+          type: string
+          format: time
+        horario_fim:
+          type: string
+          format: time
+      required:
+        - data
+        - horario_inicio
+        - horario_fim
+
+    ReservaUpdate:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/StatusReserva'
+
+    Disponibilidade:
+      type: object
+      properties:
+        data:
+          type: string
+          format: date
+        horarios_disponiveis:
+          type: array
+          items:
+            type: object
+            properties:
+              inicio:
+                type: string
+                format: time
+              fim:
+                type: string
+                format: time
+        horarios_ocupados:
+          type: array
+          items:
+            type: object
+            properties:
+              inicio:
+                type: string
+                format: time
+              fim:
+                type: string
+                format: time
+              tipo:
+                type: string
+                enum: [aula_recorrente, reserva]
+              descricao:
+                type: string
+
+    Profile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        nome:
+          type: string
+        email:
+          type: string
+          format: email
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    # Auth
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+      required:
+        - email
+        - password
+
+    LoginResponse:
+      type: object
+      properties:
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type: string
+            role:
+              $ref: '#/components/schemas/AppRole'
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        expires_in:
+          type: integer
+
+    # Responses
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  message:
+                    type: string
+
+    PaginationMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        total_pages:
+          type: integer
+
+security:
+  - BearerAuth: []
+
+paths:
+  # Auth
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh_token:
+                  type: string
+              required:
+                - refresh_token
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      access_token:
+                        type: string
+                      expires_in:
+                        type: integer
+
+  # Alunos
+  /alunos:
+    get:
+      tags: [Alunos]
+      summary: List all students
+      description: Requires admin role
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: situacao
+          in: query
+          schema:
+            $ref: '#/components/schemas/SituacaoAluno'
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: modalidade
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of students
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Aluno'
+                      pagination:
+                        $ref: '#/components/schemas/PaginationMeta'
+
+    post:
+      tags: [Alunos]
+      summary: Create student (public registration)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlunoCreate'
+      responses:
+        '201':
+          description: Student created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      message:
+                        type: string
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /alunos/{id}:
+    get:
+      tags: [Alunos]
+      summary: Get student by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Student details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Aluno'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags: [Alunos]
+      summary: Update student
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlunoUpdate'
+      responses:
+        '200':
+          description: Student updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      updated_at:
+                        type: string
+                        format: date-time
+
+    delete:
+      tags: [Alunos]
+      summary: Delete student
+      description: Requires admin role
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Student deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # Modalidades
+  /alunos/{id}/modalidades:
+    get:
+      tags: [Modalidades]
+      summary: List student modalities
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of modalities
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AlunoModalidade'
+
+    post:
+      tags: [Modalidades]
+      summary: Add modality to student
+      description: Requires admin role
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlunoModalidadeCreate'
+      responses:
+        '201':
+          description: Modality added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+
+  /alunos/{id}/modalidades/{modalidadeId}:
+    delete:
+      tags: [Modalidades]
+      summary: Remove modality from student
+      description: Requires admin role
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: modalidadeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Modality removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # Cronograma
+  /alunos/{id}/cronograma:
+    get:
+      tags: [Cronograma]
+      summary: Get student schedule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Student schedule
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CronogramaAula'
+
+    post:
+      tags: [Cronograma]
+      summary: Add class to schedule
+      description: Requires admin role
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CronogramaAulaCreate'
+      responses:
+        '201':
+          description: Class added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+
+  /cronograma/{id}:
+    delete:
+      tags: [Cronograma]
+      summary: Remove class from schedule
+      description: Requires admin role
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Class removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # Aulas Recorrentes
+  /aulas-recorrentes:
+    get:
+      tags: [Aulas Recorrentes]
+      summary: List recurring classes
+      parameters:
+        - name: dia_semana
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 6
+        - name: modalidade
+          in: query
+          schema:
+            type: string
+        - name: professor
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of recurring classes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AulaRecorrente'
+
+    post:
+      tags: [Aulas Recorrentes]
+      summary: Create recurring class
+      description: Requires admin role
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AulaRecorrenteCreate'
+      responses:
+        '201':
+          description: Class created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+
+  /aulas-recorrentes/{id}:
+    put:
+      tags: [Aulas Recorrentes]
+      summary: Update recurring class
+      description: Requires admin role
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AulaRecorrenteCreate'
+      responses:
+        '200':
+          description: Class updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+
+    delete:
+      tags: [Aulas Recorrentes]
+      summary: Delete recurring class
+      description: Requires admin role
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Class deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # Reservas
+  /reservas:
+    get:
+      tags: [Reservas]
+      summary: List reservations
+      parameters:
+        - name: data_inicio
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: data_fim
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/StatusReserva'
+        - name: aluno_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of reservations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Reserva'
+
+    post:
+      tags: [Reservas]
+      summary: Create reservation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservaCreate'
+      responses:
+        '201':
+          description: Reservation created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      status:
+                        $ref: '#/components/schemas/StatusReserva'
+                      message:
+                        type: string
+        '409':
+          description: Time slot not available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /reservas/disponibilidade:
+    get:
+      tags: [Reservas]
+      summary: Get availability for a date
+      parameters:
+        - name: data
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Availability info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Disponibilidade'
+
+  /reservas/{id}:
+    put:
+      tags: [Reservas]
+      summary: Update reservation status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservaUpdate'
+      responses:
+        '200':
+          description: Reservation updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      status:
+                        $ref: '#/components/schemas/StatusReserva'
+
+    delete:
+      tags: [Reservas]
+      summary: Delete reservation
+      description: Requires admin role
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Reservation deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # Profile
+  /me:
+    get:
+      tags: [Perfil]
+      summary: Get current user info
+      responses:
+        '200':
+          description: Current user info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      user_id:
+                        type: string
+                        format: uuid
+                      email:
+                        type: string
+                      role:
+                        $ref: '#/components/schemas/AppRole'
+                      profile:
+                        $ref: '#/components/schemas/Profile'
+                      aluno:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            format: uuid
+                          situacao:
+                            $ref: '#/components/schemas/SituacaoAluno'
+
+  /me/profile:
+    put:
+      tags: [Perfil]
+      summary: Update current user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nome:
+                  type: string
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      updated_at:
+                        type: string
+                        format: date-time
