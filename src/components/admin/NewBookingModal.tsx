@@ -34,9 +34,7 @@ import {
   getAllValidTimes,
   getValidTimesForDay,
   isTimeValidForDay,
-  checkTimeConflict,
   calculateEndTime,
-  getCourtId,
 } from "@/services/bookingService";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -50,8 +48,6 @@ export function NewBookingModal({ onBookingAdded }: NewBookingModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  const courtId = getCourtId();
 
   // Recurring booking state
   const [classType, setClassType] = useState("");
@@ -96,12 +92,33 @@ export function NewBookingModal({ onBookingAdded }: NewBookingModalProps) {
     setIsSubmitting(true);
 
     try {
+      // Verificar conflitos no banco de dados para cada dia selecionado
+      const { data: aulasExistentes } = await supabase
+        .from("aulas_recorrentes")
+        .select("dia_semana, modalidade, horario_inicio")
+        .in("dia_semana", selectedDays)
+        .eq("horario_inicio", recurringTime);
+
+      if (aulasExistentes && aulasExistentes.length > 0) {
+        const diasConflito = aulasExistentes.map(a => 
+          DAYS_OF_WEEK.find(d => d.value === a.dia_semana)?.label || `Dia ${a.dia_semana}`
+        ).join(", ");
+        
+        toast({
+          variant: "destructive",
+          title: "Conflito de horário",
+          description: `Já existe aula às ${recurringTime} nos dias: ${diasConflito}`,
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
       const horarioFim = calculateEndTime(recurringTime, 1);
 
       // Inserir uma aula para cada dia da semana selecionado
       const aulasParaInserir = selectedDays.map(dia => ({
         modalidade: classType,
-        professor: "A definir", // Campo obrigatório na tabela
+        professor: "A definir",
         dia_semana: dia,
         horario_inicio: recurringTime,
         horario_fim: horarioFim,
@@ -159,32 +176,59 @@ export function NewBookingModal({ onBookingAdded }: NewBookingModalProps) {
       return;
     }
 
-    // Verifica conflitos localmente primeiro
-    const conflict = checkTimeConflict(singleDate, singleTime, courtId);
-    if (conflict.hasConflict) {
-      toast({
-        variant: "destructive",
-        title: "Conflito de horário",
-        description: `Já existe ${conflict.conflictType === "recurring" ? "aula" : "reserva"} de ${conflict.conflictLabel} neste horário.`,
-      });
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
-      // Primeiro, verificar se já existe um aluno com esse nome ou criar entrada temporária
-      // Para reservas admin, usamos um aluno padrão ou criamos na hora
+      const dataFormatada = format(singleDate, "yyyy-MM-dd");
+
+      // Verificar conflito com aulas recorrentes no banco
+      const { data: aulasConflito } = await supabase
+        .from("aulas_recorrentes")
+        .select("modalidade")
+        .eq("dia_semana", dayOfWeek)
+        .eq("horario_inicio", singleTime)
+        .limit(1);
+
+      if (aulasConflito && aulasConflito.length > 0) {
+        toast({
+          variant: "destructive",
+          title: "Conflito de horário",
+          description: `Já existe aula de ${aulasConflito[0].modalidade} neste horário.`,
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Verificar conflito com reservas existentes no banco
+      const { data: reservasConflito } = await supabase
+        .from("reservas")
+        .select("aluno_id, alunos(nome)")
+        .eq("data", dataFormatada)
+        .eq("horario_inicio", singleTime)
+        .neq("status", "cancelada")
+        .limit(1);
+
+      if (reservasConflito && reservasConflito.length > 0) {
+        const nomeCliente = (reservasConflito[0] as any).alunos?.nome || "outro cliente";
+        toast({
+          variant: "destructive",
+          title: "Conflito de horário",
+          description: `Já existe reserva de ${nomeCliente} neste horário.`,
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Buscar ou criar aluno
       const { data: alunoExistente } = await supabase
         .from("alunos")
         .select("id")
         .ilike("nome", clientName)
         .limit(1)
-        .single();
+        .maybeSingle();
 
       let alunoId = alunoExistente?.id;
 
-      // Se não existe aluno, criar um registro temporário
       if (!alunoId) {
         const { data: novoAluno, error: erroAluno } = await supabase
           .from("alunos")
@@ -202,8 +246,7 @@ export function NewBookingModal({ onBookingAdded }: NewBookingModalProps) {
         alunoId = novoAluno.id;
       }
 
-      // Criar a reserva no banco de dados
-      const dataFormatada = format(singleDate, "yyyy-MM-dd");
+      // Criar a reserva
       const horarioFim = calculateEndTime(singleTime, 1);
 
       const { error: erroReserva } = await supabase
@@ -220,7 +263,7 @@ export function NewBookingModal({ onBookingAdded }: NewBookingModalProps) {
         throw new Error("Erro ao criar reserva: " + erroReserva.message);
       }
 
-      // Invalidar queries para atualizar dashboard
+      // Invalidar queries
       await queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
       await queryClient.invalidateQueries({ queryKey: ["reservas-do-dia"] });
       await queryClient.invalidateQueries({ queryKey: ["todas-reservas"] });

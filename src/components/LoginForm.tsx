@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 
 const emailSchema = z.string().email("Email inválido");
@@ -65,9 +66,9 @@ const LoginForm = () => {
     
     setIsLoading(true);
     const { error } = await signIn(email, password);
-    setIsLoading(false);
     
     if (error) {
+      setIsLoading(false);
       toast({
         title: "Erro ao entrar",
         description: error.message === "Invalid login credentials" 
@@ -81,14 +82,26 @@ const LoginForm = () => {
         description: "Login realizado com sucesso.",
       });
       
-      // Wait a bit for role to be fetched
-      setTimeout(() => {
-        if (role) {
-          redirectByRole(role);
+      // Buscar role diretamente do banco para garantir redirecionamento correto
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData?.session?.user) {
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', sessionData.session.user.id)
+          .maybeSingle();
+        
+        setIsLoading(false);
+        
+        if (roleData?.role) {
+          redirectByRole(roleData.role);
         } else {
           navigate('/aluno');
         }
-      }, 500);
+      } else {
+        setIsLoading(false);
+        navigate('/aluno');
+      }
     }
   };
 
