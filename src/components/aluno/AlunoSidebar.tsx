@@ -13,8 +13,7 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
+import { useAlunoSession } from "@/hooks/useAlunoSession";
 
 const menuItems = [
   {
@@ -40,13 +39,7 @@ const menuItems = [
 ];
 
 export function AlunoSidebar() {
-  const { signOut, user } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    await signOut();
-    navigate('/');
-  };
+  const { aluno, logout } = useAlunoSession();
 
   return (
     <Sidebar className="border-r border-sidebar-border">
@@ -89,15 +82,15 @@ export function AlunoSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-4">
-        {user && (
+        {aluno && (
           <p className="text-xs text-muted-foreground mb-2 truncate">
-            {user.email}
+            {aluno.email}
           </p>
         )}
         <Button
           variant="ghost"
           className="w-full justify-start text-muted-foreground hover:text-destructive"
-          onClick={handleLogout}
+          onClick={logout}
         >
           <LogOut className="mr-2 h-5 w-5" />
           Sair
