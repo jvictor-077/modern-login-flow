@@ -497,6 +497,87 @@ Remove aula da grade. **Requer role: admin**
 
 ---
 
+## Dashboard Admin
+
+### GET /dashboard/stats
+Retorna estatísticas do dashboard administrativo. **Requer role: admin**
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "reservas_hoje": 12,
+    "usuarios_ativos": 48,
+    "horas_reservadas": 86,
+    "taxa_ocupacao": 78,
+    "tendencia_reservas": "+3",
+    "tendencia_usuarios": "+5",
+    "tendencia_horas": "+12h",
+    "tendencia_ocupacao": "+8%"
+  }
+}
+```
+
+### GET /dashboard/reservas-do-dia
+Retorna todas as reservas de uma data específica. **Requer role: admin**
+
+**Query Parameters:**
+| Param | Type | Description |
+|-------|------|-------------|
+| data | date | Data desejada (YYYY-MM-DD) |
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "aluno_id": "uuid",
+      "aluno": {
+        "id": "uuid",
+        "nome": "João Silva",
+        "email": "joao@email.com",
+        "celular": "11999999999"
+      },
+      "data": "2024-01-25",
+      "horario_inicio": "14:00",
+      "horario_fim": "15:00",
+      "status": "confirmada",
+      "created_at": "2024-01-20T10:00:00Z"
+    }
+  ]
+}
+```
+
+### GET /dashboard/ocupacao
+Retorna dados de ocupação por período. **Requer role: admin**
+
+**Query Parameters:**
+| Param | Type | Description |
+|-------|------|-------------|
+| data_inicio | date | Data inicial (YYYY-MM-DD) |
+| data_fim | date | Data final (YYYY-MM-DD) |
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "total_slots": 450,
+    "slots_ocupados": 351,
+    "taxa_ocupacao_media": 78,
+    "por_dia": [
+      { "data": "2024-01-20", "ocupacao": 75 },
+      { "data": "2024-01-21", "ocupacao": 82 }
+    ]
+  }
+}
+```
+
+---
+
 ## Reservas
 
 ### GET /reservas

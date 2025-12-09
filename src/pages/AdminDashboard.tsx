@@ -7,21 +7,44 @@ import { TimeSlotGrid } from "@/components/admin/TimeSlotGrid";
 import { NewBookingModal } from "@/components/admin/NewBookingModal";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarDays, Users, Clock, TrendingUp } from "lucide-react";
+import { CalendarDays, Users, Clock, TrendingUp, Loader2 } from "lucide-react";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AdminDashboard() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [refreshKey, setRefreshKey] = useState(0);
+  const { data: statsData, isLoading: isLoadingStats } = useDashboardStats();
 
   const handleBookingAdded = () => {
     setRefreshKey(prev => prev + 1);
   };
 
   const stats = [
-    { label: "Reservas Hoje", value: "12", icon: CalendarDays, trend: "+3" },
-    { label: "Usuários Ativos", value: "48", icon: Users, trend: "+5" },
-    { label: "Horas Reservadas", value: "86h", icon: Clock, trend: "+12h" },
-    { label: "Taxa de Ocupação", value: "78%", icon: TrendingUp, trend: "+8%" },
+    { 
+      label: "Reservas Hoje", 
+      value: isLoadingStats ? null : statsData?.reservasHoje.toString() || "0", 
+      icon: CalendarDays, 
+      trend: statsData?.tendenciaReservas || "0" 
+    },
+    { 
+      label: "Usuários Ativos", 
+      value: isLoadingStats ? null : statsData?.usuariosAtivos.toString() || "0", 
+      icon: Users, 
+      trend: statsData?.tendenciaUsuarios || "0" 
+    },
+    { 
+      label: "Horas Reservadas", 
+      value: isLoadingStats ? null : `${statsData?.horasReservadas || 0}h`, 
+      icon: Clock, 
+      trend: statsData?.tendenciaHoras || "0h" 
+    },
+    { 
+      label: "Taxa de Ocupação", 
+      value: isLoadingStats ? null : `${statsData?.taxaOcupacao || 0}%`, 
+      icon: TrendingUp, 
+      trend: statsData?.tendenciaOcupacao || "0%" 
+    },
   ];
 
   return (
@@ -61,9 +84,13 @@ export default function AdminDashboard() {
                       </span>
                     </div>
                     <div className="mt-3">
-                      <p className="text-2xl font-display font-bold text-foreground">
-                        {stat.value}
-                      </p>
+                      {stat.value === null ? (
+                        <Skeleton className="h-8 w-16 mb-1" />
+                      ) : (
+                        <p className="text-2xl font-display font-bold text-foreground">
+                          {stat.value}
+                        </p>
+                      )}
                       <p className="text-sm text-muted-foreground">{stat.label}</p>
                     </div>
                   </CardContent>
