@@ -15,7 +15,6 @@ import {
 import { ScanLine, Plus, Minus, Package, PlusCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ProdutoEstoque } from "@/types/estoque";
-import { produtosEstoqueQuadra } from "@/data/estoqueData";
 import { QRCodeScanner } from "@/components/QRCodeScanner";
 import { ScannedProductsConfirmation } from "@/components/ScannedProductsConfirmation";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -28,7 +27,6 @@ interface ScannedProduct {
 }
 
 export default function Estoque() {
-  const [products, setProducts] = useState<ProdutoEstoque[]>(produtosEstoqueQuadra);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
