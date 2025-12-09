@@ -46,59 +46,27 @@ serve(async (req) => {
 
     const html = await response.text();
     console.log('HTML length:', html.length);
+    
+    // Log a sample of the HTML to debug
+    console.log('HTML sample (first 500 chars):', html.substring(0, 500));
 
     const products: ScannedProduct[] = [];
     
-    // Split by <tr> to get each product row
-    const rows = html.split(/<tr>/i);
-    console.log('Found rows:', rows.length);
+    // Use regex to find all product entries
+    // Pattern: txtTit class followed by product name, then Rqtd, RUN, RvlUnit
+    const productPattern = /<span\s+class="txtTit">([^<]+)<\/span>[\s\S]*?<span\s+class="Rqtd"><strong>Qtde\.\:\s*<\/strong>([^<]+)<\/span>[\s\S]*?<span\s+class="RUN"><strong>UN\:\s*<\/strong>([^<]+)<\/span>[\s\S]*?<span\s+class="RvlUnit"><strong>Vl\.\s*Unit\.\:\s*<\/strong>([^<]+)<\/span>/gi;
     
-    for (const row of rows) {
-      // Skip rows that don't have product info or are header rows
-      // Product rows have txtTit without noWrap class
-      if (!row.includes('class="txtTit"') || !row.includes('class="Rqtd"')) {
-        continue;
-      }
-      
-      // Skip the "Vl. Total" column which also has txtTit but with noWrap
-      // We want the first txtTit which is the product name
-      
-      // Extract product name - first txtTit span (not the noWrap one)
-      const nomeMatch = row.match(/<span class="txtTit">([^<]+)<\/span>/);
-      if (!nomeMatch) {
-        console.log('No name match in row');
-        continue;
-      }
-      
-      const nome = nomeMatch[1].trim();
-      console.log('Found product:', nome);
-      
-      // Extract quantity - pattern: <span class="Rqtd"><strong>Qtde.: </strong>VALUE</span>
-      const qtdMatch = row.match(/<span class="Rqtd"><strong>Qtde\.: <\/strong>([^<]+)<\/span>/);
-      if (!qtdMatch) {
-        console.log('No qty match for:', nome);
-        continue;
-      }
-      
-      // Extract unit - pattern: <span class="RUN"><strong>UN: </strong>VALUE</span>
-      const unMatch = row.match(/<span class="RUN"><strong>UN: <\/strong>([^<]+)<\/span>/);
-      
-      // Extract price - pattern: <span class="RvlUnit"><strong>Vl. Unit.: </strong>VALUE</span>
-      const precoMatch = row.match(/<span class="RvlUnit"><strong>Vl\. Unit\.: <\/strong>([^<]+)<\/span>/);
-      if (!precoMatch) {
-        console.log('No price match for:', nome);
-        continue;
-      }
-      
-      // Parse values - Brazilian format uses comma as decimal separator
-      const qtdStr = qtdMatch[1].trim().replace(',', '.');
-      const precoStr = precoMatch[1].trim().replace(',', '.');
+    let match;
+    while ((match = productPattern.exec(html)) !== null) {
+      const nome = match[1].trim();
+      const qtdStr = match[2].trim().replace(',', '.');
+      const unidade = match[3].trim();
+      const precoStr = match[4].trim().replace(',', '.');
       
       const quantidade = parseFloat(qtdStr) || 1;
       const preco = parseFloat(precoStr) || 0;
-      const unidade = unMatch ? unMatch[1].trim() : 'UN';
       
-      console.log(`Parsed: ${nome} | Qty: ${quantidade} | Price: ${preco} | Unit: ${unidade}`);
+      console.log(`Found: ${nome} | Qty: ${quantidade} | Unit: ${unidade} | Price: ${preco}`);
       
       products.push({ nome, quantidade, preco, unidade });
     }
