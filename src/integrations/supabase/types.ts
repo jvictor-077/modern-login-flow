@@ -112,6 +112,30 @@ export type Database = {
         }
         Relationships: []
       }
+      aulas_avulsas_precos: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          modalidade: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          modalidade: string
+          valor: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          modalidade?: string
+          valor?: number
+        }
+        Relationships: []
+      }
       aulas_recorrentes: {
         Row: {
           created_at: string
@@ -142,6 +166,30 @@ export type Database = {
           max_alunos?: number | null
           modalidade?: string
           professor?: string
+        }
+        Relationships: []
+      }
+      configuracoes: {
+        Row: {
+          chave: string
+          created_at: string
+          id: string
+          updated_at: string
+          valor: Json
+        }
+        Insert: {
+          chave: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          valor: Json
+        }
+        Update: {
+          chave?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          valor?: Json
         }
         Relationships: []
       }
@@ -188,6 +236,210 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      lanchonete_itens_preparo: {
+        Row: {
+          created_at: string
+          estoque_minimo: number
+          id: string
+          is_active: boolean
+          nome: string
+          quantidade: number
+          unidade: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          estoque_minimo?: number
+          id?: string
+          is_active?: boolean
+          nome: string
+          quantidade?: number
+          unidade?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          estoque_minimo?: number
+          id?: string
+          is_active?: boolean
+          nome?: string
+          quantidade?: number
+          unidade?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      lanchonete_pedido_itens: {
+        Row: {
+          created_at: string
+          id: string
+          pedido_id: string
+          preco_unitario: number
+          produto_id: string
+          quantidade: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pedido_id: string
+          preco_unitario: number
+          produto_id: string
+          quantidade?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pedido_id?: string
+          preco_unitario?: number
+          produto_id?: string
+          quantidade?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lanchonete_pedido_itens_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "lanchonete_pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lanchonete_pedido_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "lanchonete_produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lanchonete_pedidos: {
+        Row: {
+          cliente_nome: string
+          created_at: string
+          id: string
+          observacoes: string | null
+          status: Database["public"]["Enums"]["status_pedido"]
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          cliente_nome: string
+          created_at?: string
+          id?: string
+          observacoes?: string | null
+          status?: Database["public"]["Enums"]["status_pedido"]
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          cliente_nome?: string
+          created_at?: string
+          id?: string
+          observacoes?: string | null
+          status?: Database["public"]["Enums"]["status_pedido"]
+          total?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      lanchonete_produtos: {
+        Row: {
+          categoria: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          nome: string
+          preco: number
+          quantidade: number
+          updated_at: string
+        }
+        Insert: {
+          categoria?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          nome: string
+          preco?: number
+          quantidade?: number
+          updated_at?: string
+        }
+        Update: {
+          categoria?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          nome?: string
+          preco?: number
+          quantidade?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      modalidade_precos: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          id: string
+          is_active: boolean
+          modalidade: string
+          plano: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          is_active?: boolean
+          modalidade: string
+          plano: string
+          updated_at?: string
+          valor: number
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          is_active?: boolean
+          modalidade?: string
+          plano?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: []
+      }
+      produtos_estoque: {
+        Row: {
+          categoria: string
+          created_at: string
+          id: string
+          is_active: boolean
+          nome: string
+          preco: number
+          quantidade: number
+          updated_at: string
+        }
+        Insert: {
+          categoria: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          nome: string
+          preco?: number
+          quantidade?: number
+          updated_at?: string
+        }
+        Update: {
+          categoria?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          nome?: string
+          preco?: number
+          quantidade?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -317,6 +569,12 @@ export type Database = {
       app_role: "admin" | "aluno" | "lanchonete"
       periodo_aula: "manha" | "tarde" | "noite"
       situacao_aluno: "em_dia" | "pendente" | "atrasado"
+      status_pedido:
+        | "pendente"
+        | "preparando"
+        | "pronto"
+        | "entregue"
+        | "cancelado"
       status_reserva: "pendente" | "confirmada" | "cancelada" | "concluida"
     }
     CompositeTypes: {
@@ -448,6 +706,13 @@ export const Constants = {
       app_role: ["admin", "aluno", "lanchonete"],
       periodo_aula: ["manha", "tarde", "noite"],
       situacao_aluno: ["em_dia", "pendente", "atrasado"],
+      status_pedido: [
+        "pendente",
+        "preparando",
+        "pronto",
+        "entregue",
+        "cancelado",
+      ],
       status_reserva: ["pendente", "confirmada", "cancelada", "concluida"],
     },
   },

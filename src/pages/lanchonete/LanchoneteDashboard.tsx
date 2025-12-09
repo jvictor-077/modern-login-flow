@@ -1,32 +1,34 @@
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, ShoppingBag, TrendingUp, Users } from "lucide-react";
-import { estatisticasLanchonete, pedidos } from "@/data/lanchoneteData";
+import { DollarSign, ShoppingBag, TrendingUp, Users, Loader2 } from "lucide-react";
+import { useLanchonetePedidos } from "@/hooks/useLanchonete";
 import { STATUS_PEDIDO_CONFIG } from "@/types/lanchonete";
 
 export default function LanchoneteDashboard() {
+  const { pedidos, isLoading, estatisticas } = useLanchonetePedidos();
+
   const stats = [
     {
       title: "Vendas Hoje",
-      value: `R$ ${estatisticasLanchonete.vendasHoje.toFixed(2).replace(".", ",")}`,
+      value: `R$ ${estatisticas.vendasHoje.toFixed(2).replace(".", ",")}`,
       icon: DollarSign,
       change: "+12%",
     },
     {
       title: "Pedidos Hoje",
-      value: String(estatisticasLanchonete.pedidosHoje),
+      value: String(estatisticas.pedidosHoje),
       icon: ShoppingBag,
       change: "+8%",
     },
     {
       title: "Ticket Médio",
-      value: `R$ ${estatisticasLanchonete.ticketMedio.toFixed(2).replace(".", ",")}`,
+      value: `R$ ${estatisticas.ticketMedio.toFixed(2).replace(".", ",")}`,
       icon: TrendingUp,
       change: "+5%",
     },
     {
       title: "Clientes Atendidos",
-      value: String(estatisticasLanchonete.clientesAtendidos),
+      value: String(estatisticas.clientesAtendidos),
       icon: Users,
       change: "+15%",
     },
@@ -34,6 +36,16 @@ export default function LanchoneteDashboard() {
 
   // Últimos 4 pedidos
   const recentOrders = pedidos.slice(0, 4);
+
+  if (isLoading) {
+    return (
+      <AdminLayout title="Dashboard Lanchonete" description="Acompanhe as vendas e pedidos do dia">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout
@@ -66,32 +78,45 @@ export default function LanchoneteDashboard() {
           <CardTitle className="text-lg font-semibold">Pedidos Recentes</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="divide-y divide-border/50">
-            {recentOrders.map((order) => {
-              const statusConfig = STATUS_PEDIDO_CONFIG[order.status];
-              const itemsText = order.itens.map(i => `${i.quantidade}x ${i.nome}`).join(", ");
-              
-              return (
-                <div key={order.id} className="flex items-center justify-between p-3 sm:p-4 hover:bg-muted/30 transition-colors">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <span className="text-xs sm:text-sm font-medium text-muted-foreground">#{order.id.replace("ped-", "")}</span>
-                      <span className="font-medium text-foreground text-sm sm:text-base truncate">{order.cliente_nome}</span>
+          {recentOrders.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">
+              Nenhum pedido registrado ainda.
+            </div>
+          ) : (
+            <div className="divide-y divide-border/50">
+              {recentOrders.map((order) => {
+                const statusConfig = STATUS_PEDIDO_CONFIG[order.status];
+                const itens = (order as any).itens || [];
+                const itemsText = itens.map((i: any) => `${i.quantidade}x ${i.produto?.nome || "Item"}`).join(", ");
+                
+                return (
+                  <div key={order.id} className="flex items-center justify-between p-3 sm:p-4 hover:bg-muted/30 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <span className="text-xs sm:text-sm font-medium text-muted-foreground">
+                          #{order.id.slice(0, 8)}
+                        </span>
+                        <span className="font-medium text-foreground text-sm sm:text-base truncate">
+                          {order.cliente_nome}
+                        </span>
+                      </div>
+                      <p className="text-xs sm:text-sm text-muted-foreground mt-1 truncate">
+                        {itemsText || "Sem itens"}
+                      </p>
                     </div>
-                    <p className="text-xs sm:text-sm text-muted-foreground mt-1 truncate">{itemsText}</p>
+                    <div className="text-right ml-2 flex-shrink-0">
+                      <p className="font-semibold text-foreground text-sm sm:text-base">
+                        R$ {Number(order.total).toFixed(2).replace(".", ",")}
+                      </p>
+                      <span className={`text-xs px-2 py-1 rounded-full ${statusConfig.color}`}>
+                        {statusConfig.label}
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-right ml-2 flex-shrink-0">
-                    <p className="font-semibold text-foreground text-sm sm:text-base">
-                      R$ {order.total.toFixed(2).replace(".", ",")}
-                    </p>
-                    <span className={`text-xs px-2 py-1 rounded-full ${statusConfig.color}`}>
-                      {statusConfig.label}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
     </AdminLayout>
