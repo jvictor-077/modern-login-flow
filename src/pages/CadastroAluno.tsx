@@ -20,10 +20,14 @@ import {
 } from "@/components/ui/accordion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowLeft, UserPlus, Phone, Heart, Calendar, FileText, Loader2 } from "lucide-react";
+import { ArrowLeft, UserPlus, Phone, Heart, Calendar, FileText, Loader2, Key, RefreshCw } from "lucide-react";
 import FloatingShapes from "@/components/FloatingShapes";
 import { precosModalidades, getPlanosModalidade, formatarPreco, matricula } from "@/data/precosData";
 import { TIPOS_SANGUINEOS } from "@/types/aluno";
+
+const generatePin = (): string => {
+  return Math.floor(1000 + Math.random() * 9000).toString();
+};
 import { supabase } from "@/integrations/supabase/client";
 
 const modalidadesDisponiveis = precosModalidades.map((m) => ({
@@ -52,7 +56,12 @@ const CadastroAluno = () => {
     alergias: "",
     autorizacaoImagem: false,
     observacoes: "",
+    pin: generatePin(),
   });
+
+  const handleRegeneratePin = () => {
+    setFormData(prev => ({ ...prev, pin: generatePin() }));
+  };
 
   const [modalidadesSelecionadas, setModalidadesSelecionadas] = useState<ModalidadeSelecionada[]>([]);
 
@@ -116,6 +125,7 @@ const CadastroAluno = () => {
           autoriza_imagem: formData.autorizacaoImagem,
           observacoes: formData.observacoes.trim() || null,
           situacao: "pendente",
+          pin: formData.pin,
         })
         .select("id")
         .single();
@@ -231,6 +241,33 @@ const CadastroAluno = () => {
                     required
                     className="h-9"
                   />
+                </div>
+                <div className="space-y-1.5 sm:col-span-2 lg:col-span-3">
+                  <Label htmlFor="pin" className="text-sm flex items-center gap-2">
+                    <Key className="h-4 w-4 text-primary" />
+                    Senha de Acesso (4 dígitos) *
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="pin"
+                      value={formData.pin}
+                      readOnly
+                      className="h-9 font-mono text-lg tracking-widest text-center max-w-[120px] bg-primary/10 border-primary/30"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRegeneratePin}
+                      className="h-9 gap-1"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                      Gerar nova
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Anote esta senha! Você usará para acessar sua área do aluno.
+                  </p>
                 </div>
               </div>
 

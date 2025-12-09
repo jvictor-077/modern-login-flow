@@ -64,6 +64,7 @@ export type Database = {
           id: string
           nome: string
           observacoes: string | null
+          pin: string | null
           situacao: Database["public"]["Enums"]["situacao_aluno"]
           tipo_sanguineo: string | null
           updated_at: string
@@ -83,6 +84,7 @@ export type Database = {
           id?: string
           nome: string
           observacoes?: string | null
+          pin?: string | null
           situacao?: Database["public"]["Enums"]["situacao_aluno"]
           tipo_sanguineo?: string | null
           updated_at?: string
@@ -102,6 +104,7 @@ export type Database = {
           id?: string
           nome?: string
           observacoes?: string | null
+          pin?: string | null
           situacao?: Database["public"]["Enums"]["situacao_aluno"]
           tipo_sanguineo?: string | null
           updated_at?: string
