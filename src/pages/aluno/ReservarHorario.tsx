@@ -23,7 +23,7 @@ import {
   addSingleBooking,
   getCourtId
 } from "@/services/bookingService";
-import { pricingRules } from "@/data/mockData";
+import { getPricingRules } from "@/services/bookingService";
 
 const ReservarHorario = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());

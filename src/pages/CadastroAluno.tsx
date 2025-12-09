@@ -22,18 +22,34 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { toast } from "sonner";
 import { ArrowLeft, UserPlus, Phone, Heart, Calendar, FileText, Loader2, Key, RefreshCw } from "lucide-react";
 import FloatingShapes from "@/components/FloatingShapes";
-import { precosModalidades, getPlanosModalidade, formatarPreco, matricula } from "@/data/precosData";
-import { TIPOS_SANGUINEOS } from "@/types/aluno";
+import { formatarPreco } from "@/hooks/usePrecos";
+import { TIPOS_SANGUINEOS, MODALIDADES_DISPONIVEIS } from "@/types/aluno";
+import { supabase } from "@/integrations/supabase/client";
 
 const generatePin = (): string => {
   return Math.floor(1000 + Math.random() * 9000).toString();
 };
-import { supabase } from "@/integrations/supabase/client";
 
-const modalidadesDisponiveis = precosModalidades.map((m) => ({
-  id: m.modalidade.toLowerCase().replace(/\s+/g, "_"),
-  nome: m.modalidade,
+// Preços estáticos (serão carregados do banco posteriormente)
+const PRECOS_MODALIDADES: Record<string, { nome: string; valor: number }[]> = {
+  "Funcional": [{ nome: "Mensal", valor: 180 }, { nome: "Trimestral", valor: 160 }, { nome: "1x por semana", valor: 110 }],
+  "Vôlei Adulto Noite": [{ nome: "Mensal", valor: 180 }, { nome: "Trimestral", valor: 160 }, { nome: "1x por semana", valor: 110 }],
+  "Vôlei Teen": [{ nome: "Mensal", valor: 180 }, { nome: "Trimestral", valor: 160 }, { nome: "1x por semana", valor: 110 }],
+  "Vôlei Adulto Manhã": [{ nome: "Mensal", valor: 140 }, { nome: "1x por semana", valor: 90 }],
+  "Beach Tennis": [{ nome: "Mensal", valor: 220 }, { nome: "1x por semana", valor: 130 }],
+  "Futevôlei": [{ nome: "1x por semana", valor: 150 }, { nome: "2x por semana", valor: 220 }, { nome: "3x por semana", valor: 310 }],
+};
+
+const MATRICULA = { valor: 50, descricao: "Inclui camisa de treino" };
+
+const modalidadesDisponiveis = MODALIDADES_DISPONIVEIS.map((m) => ({
+  id: m.toLowerCase().replace(/\s+/g, "_"),
+  nome: m,
 }));
+
+function getPlanosModalidade(modalidade: string) {
+  return PRECOS_MODALIDADES[modalidade] || [];
+}
 
 interface ModalidadeSelecionada {
   modalidade: string;
@@ -454,8 +470,8 @@ const CadastroAluno = () => {
                     </div>
                     
                     <div className="mt-3 p-2 rounded-lg bg-primary/10 border border-primary/30 text-sm">
-                      <span className="font-medium">Taxa de Matrícula: {formatarPreco(matricula.valor)}</span>
-                      <span className="text-muted-foreground ml-2 text-xs">({matricula.descricao})</span>
+                      <span className="font-medium">Taxa de Matrícula: {formatarPreco(MATRICULA.valor)}</span>
+                      <span className="text-muted-foreground ml-2 text-xs">({MATRICULA.descricao})</span>
                     </div>
                   </AccordionContent>
                 </AccordionItem>

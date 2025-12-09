@@ -1,4 +1,310 @@
 -- =============================================
+-- SCHEMA DO BANCO DE DADOS POSTGRESQL
+-- Sistema de Gestão de Quadra Esportiva
+-- Gerado em: 2024-12-09
+-- =============================================
+
+-- =============================================
+-- ENUMS
+-- =============================================
+
+CREATE TYPE public.app_role AS ENUM ('admin', 'aluno', 'lanchonete');
+CREATE TYPE public.situacao_aluno AS ENUM ('em_dia', 'pendente', 'atrasado');
+CREATE TYPE public.status_reserva AS ENUM ('pendente', 'confirmada', 'cancelada', 'concluida');
+CREATE TYPE public.periodo_aula AS ENUM ('manha', 'tarde', 'noite');
+CREATE TYPE public.status_pedido AS ENUM ('pendente', 'preparando', 'pronto', 'entregue', 'cancelado');
+
+-- =============================================
+-- TABELAS DE USUÁRIOS E AUTENTICAÇÃO
+-- =============================================
+
+-- Perfis de usuários (vinculado ao auth.users)
+CREATE TABLE public.profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL UNIQUE,
+  nome TEXT NOT NULL,
+  email TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+-- Papéis de usuários
+CREATE TABLE public.user_roles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
+  role app_role NOT NULL DEFAULT 'aluno',
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  UNIQUE(user_id, role)
+);
+
+-- =============================================
+-- TABELAS DE ALUNOS
+-- =============================================
+
+-- Alunos cadastrados
+CREATE TABLE public.alunos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID,
+  nome TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  cpf TEXT,
+  celular TEXT,
+  data_nascimento DATE,
+  endereco TEXT,
+  contato_emergencia TEXT,
+  tipo_sanguineo TEXT,
+  doencas TEXT,
+  alergias TEXT,
+  observacoes TEXT,
+  autoriza_imagem BOOLEAN DEFAULT false,
+  situacao situacao_aluno NOT NULL DEFAULT 'pendente',
+  pin TEXT,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+-- Modalidades do aluno
+CREATE TABLE public.aluno_modalidades (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  aluno_id UUID NOT NULL REFERENCES public.alunos(id) ON DELETE CASCADE,
+  modalidade TEXT NOT NULL,
+  plano TEXT NOT NULL,
+  valor NUMERIC(10,2) NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+-- Cronograma de aulas do aluno
+CREATE TABLE public.cronograma_aulas (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  aluno_id UUID NOT NULL REFERENCES public.alunos(id) ON DELETE CASCADE,
+  modalidade TEXT NOT NULL,
+  dia_semana INTEGER NOT NULL,
+  horario TIME NOT NULL,
+  local TEXT NOT NULL DEFAULT 'Quadra',
+  professor TEXT,
+  periodo periodo_aula NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+-- =============================================
+-- TABELAS DE AULAS E RESERVAS
+-- =============================================
+
+-- Aulas recorrentes
+CREATE TABLE public.aulas_recorrentes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  modalidade TEXT NOT NULL,
+  professor TEXT NOT NULL,
+  dia_semana INTEGER NOT NULL,
+  horario_inicio TIME NOT NULL,
+  horario_fim TIME NOT NULL,
+  max_alunos INTEGER DEFAULT 20,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+-- Reservas avulsas
+CREATE TABLE public.reservas (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  aluno_id UUID NOT NULL REFERENCES public.alunos(id) ON DELETE CASCADE,
+  data DATE NOT NULL,
+  horario_inicio TIME NOT NULL,
+  horario_fim TIME NOT NULL,
+  status status_reserva NOT NULL DEFAULT 'pendente',
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+-- =============================================
+-- TABELAS DE ESTOQUE (QUADRA)
+-- =============================================
+
+CREATE TABLE public.produtos_estoque (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nome TEXT NOT NULL,
+  preco NUMERIC(10,2) NOT NULL DEFAULT 0,
+  quantidade INTEGER NOT NULL DEFAULT 0,
+  categoria TEXT NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+-- =============================================
+-- TABELAS DA LANCHONETE
+-- =============================================
+
+-- Produtos da lanchonete
+CREATE TABLE public.lanchonete_produtos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nome TEXT NOT NULL,
+  preco NUMERIC(10,2) NOT NULL DEFAULT 0,
+  quantidade INTEGER NOT NULL DEFAULT 0,
+  categoria TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+-- Itens de preparo
+CREATE TABLE public.lanchonete_itens_preparo (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nome TEXT NOT NULL,
+  quantidade INTEGER NOT NULL DEFAULT 0,
+  unidade TEXT NOT NULL DEFAULT 'un',
+  estoque_minimo INTEGER NOT NULL DEFAULT 5,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+-- Pedidos
+CREATE TABLE public.lanchonete_pedidos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cliente_nome TEXT NOT NULL,
+  total NUMERIC(10,2) NOT NULL DEFAULT 0,
+  status status_pedido NOT NULL DEFAULT 'pendente',
+  observacoes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+-- Itens do pedido
+CREATE TABLE public.lanchonete_pedido_itens (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  pedido_id UUID NOT NULL REFERENCES public.lanchonete_pedidos(id) ON DELETE CASCADE,
+  produto_id UUID NOT NULL REFERENCES public.lanchonete_produtos(id),
+  quantidade INTEGER NOT NULL DEFAULT 1,
+  preco_unitario NUMERIC(10,2) NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+-- =============================================
+-- TABELAS DE PREÇOS E CONFIGURAÇÕES
+-- =============================================
+
+CREATE TABLE public.modalidade_precos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  modalidade TEXT NOT NULL,
+  plano TEXT NOT NULL,
+  valor NUMERIC(10,2) NOT NULL,
+  descricao TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  UNIQUE(modalidade, plano)
+);
+
+CREATE TABLE public.aulas_avulsas_precos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  modalidade TEXT NOT NULL UNIQUE,
+  valor NUMERIC(10,2) NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+CREATE TABLE public.configuracoes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  chave TEXT NOT NULL UNIQUE,
+  valor JSONB NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+-- =============================================
+-- ÍNDICES
+-- =============================================
+
+CREATE INDEX idx_alunos_email ON public.alunos(email);
+CREATE INDEX idx_alunos_situacao ON public.alunos(situacao);
+CREATE INDEX idx_aluno_modalidades_aluno_id ON public.aluno_modalidades(aluno_id);
+CREATE INDEX idx_cronograma_aluno_id ON public.cronograma_aulas(aluno_id);
+CREATE INDEX idx_reservas_aluno_id ON public.reservas(aluno_id);
+CREATE INDEX idx_reservas_data ON public.reservas(data);
+CREATE INDEX idx_produtos_estoque_categoria ON public.produtos_estoque(categoria);
+CREATE INDEX idx_lanchonete_produtos_categoria ON public.lanchonete_produtos(categoria);
+CREATE INDEX idx_lanchonete_pedidos_status ON public.lanchonete_pedidos(status);
+CREATE INDEX idx_lanchonete_pedidos_created_at ON public.lanchonete_pedidos(created_at);
+CREATE INDEX idx_modalidade_precos_modalidade ON public.modalidade_precos(modalidade);
+
+-- =============================================
+-- FUNÇÕES
+-- =============================================
+
+-- Função para verificar papel do usuário
+CREATE OR REPLACE FUNCTION public.has_role(_user_id UUID, _role app_role)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.user_roles
+    WHERE user_id = _user_id
+      AND role = _role
+  )
+$$;
+
+-- Função para obter papel do usuário
+CREATE OR REPLACE FUNCTION public.get_user_role(_user_id UUID)
+RETURNS app_role
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT role
+  FROM public.user_roles
+  WHERE user_id = _user_id
+  LIMIT 1
+$$;
+
+-- Função para atualizar updated_at
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$;
+
+-- =============================================
+-- TRIGGERS
+-- =============================================
+
+CREATE TRIGGER update_alunos_updated_at
+BEFORE UPDATE ON public.alunos
+FOR EACH ROW
+EXECUTE FUNCTION public.update_updated_at_column();
+
+CREATE TRIGGER update_reservas_updated_at
+BEFORE UPDATE ON public.reservas
+FOR EACH ROW
+EXECUTE FUNCTION public.update_updated_at_column();
+
+CREATE TRIGGER update_produtos_estoque_updated_at
+BEFORE UPDATE ON public.produtos_estoque
+FOR EACH ROW
+EXECUTE FUNCTION public.update_updated_at_column();
+
+CREATE TRIGGER update_lanchonete_produtos_updated_at
+BEFORE UPDATE ON public.lanchonete_produtos
+FOR EACH ROW
+EXECUTE FUNCTION public.update_updated_at_column();
+
+CREATE TRIGGER update_lanchonete_itens_preparo_updated_at
+BEFORE UPDATE ON public.lanchonete_itens_preparo
+FOR EACH ROW
+EXECUTE FUNCTION public.update_updated_at_column();
+
+CREATE TRIGGER update_lanchonete_pedidos_updated_at
+BEFORE UPDATE ON public.lanchonete_pedidos
+FOR EACH ROW
+EXECUTE FUNCTION public.update_updated_at_column();
 -- DATABASE SCHEMA - Arena Sports Management
 -- PostgreSQL Database Schema Documentation
 -- Generated: 2024-12-09
