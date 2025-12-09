@@ -1,3 +1,107 @@
+// =============================================
+// DADOS MOCKADOS - ESTOQUE QUADRA (INTEGRADO)
+// =============================================
+
+// Definição da interface ProdutoEstoque (Assumida de "@/types/estoque")
+// Adicionada para que este arquivo seja autônomo.
+interface ProdutoEstoque {
+  id: string;
+  nome: string;
+  preco: number;
+  quantidade: number;
+  categoria?: string; // Adicionado "?" pois nem todos os mocks o utilizam
+  is_active: boolean;
+  created_at: Date;
+  updated_at: Date;
+  // Outras propriedades se existirem em "@/types/estoque"
+}
+
+export const produtosEstoqueQuadra: ProdutoEstoque[] = [
+  {
+    id: "prod-1",
+    nome: "Bola de Vôlei Mikasa",
+    preco: 189.9,
+    quantidade: 8,
+    categoria: "Equipamentos",
+    is_active: true,
+    created_at: new Date("2024-01-01"),
+    updated_at: new Date("2024-01-01"),
+  },
+  {
+    id: "prod-2",
+    nome: "Raquete Beach Tennis Pro",
+    preco: 459.9,
+    quantidade: 5,
+    categoria: "Equipamentos",
+    is_active: true,
+    created_at: new Date("2024-01-01"),
+    updated_at: new Date("2024-01-01"),
+  },
+  {
+    id: "prod-3",
+    nome: "Rede de Vôlei Profissional",
+    preco: 299.9,
+    quantidade: 3,
+    categoria: "Equipamentos",
+    is_active: true,
+    created_at: new Date("2024-01-01"),
+    updated_at: new Date("2024-01-01"),
+  },
+  {
+    id: "prod-4",
+    nome: "Kit Marcação de Quadra",
+    preco: 89.9,
+    quantidade: 12,
+    categoria: "Materiais",
+    is_active: true,
+    created_at: new Date("2024-01-01"),
+    updated_at: new Date("2024-01-01"),
+  },
+  {
+    id: "prod-5",
+    nome: "Bola de Beach Tennis (Pack 3)",
+    preco: 59.9,
+    quantidade: 20,
+    categoria: "Equipamentos",
+    is_active: true,
+    created_at: new Date("2024-01-01"),
+    updated_at: new Date("2024-01-01"),
+  },
+  {
+    id: "prod-6",
+    nome: "Grip Overgrip (Pack 10)",
+    preco: 34.9,
+    quantidade: 15,
+    categoria: "Acessórios",
+    is_active: true,
+    created_at: new Date("2024-01-01"),
+    updated_at: new Date("2024-01-01"),
+  },
+  {
+    id: "prod-7",
+    nome: "Squeeze 1L",
+    preco: 24.9,
+    quantidade: 25,
+    categoria: "Acessórios",
+    is_active: true,
+    created_at: new Date("2024-01-01"),
+    updated_at: new Date("2024-01-01"),
+  },
+  {
+    id: "prod-8",
+    nome: "Toalha Esportiva",
+    preco: 39.9,
+    quantidade: 18,
+    categoria: "Acessórios",
+    is_active: true,
+    created_at: new Date("2024-01-01"),
+    updated_at: new Date("2024-01-01"),
+  },
+];
+
+// =============================================
+// COMPONENTE ESTOQUE (INTEGRADO)
+// =============================================
 import { useState } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -14,7 +118,8 @@ import {
 } from "@/components/ui/dialog";
 import { ScanLine, Plus, Minus, Package, PlusCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { ProdutoEstoque } from "@/types/estoque";
+// import { ProdutoEstoque } from "@/types/estoque"; // Removido, definido no início
+// import { produtosEstoqueQuadra } from "@/data/estoqueData"; // Removido, definido e exportado no início
 import { QRCodeScanner } from "@/components/QRCodeScanner";
 import { ScannedProductsConfirmation } from "@/components/ScannedProductsConfirmation";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -26,7 +131,12 @@ interface ScannedProduct {
   unidade?: string;
 }
 
+// O tipo ProdutoEstoque já foi definido acima
+type EstoqueProduto = ProdutoEstoque; // Alias para clareza, se necessário
+
 export default function Estoque() {
+  // Agora 'produtosEstoqueQuadra' é importado localmente (no mesmo arquivo)
+  const [products, setProducts] = useState<EstoqueProduto[]>(produtosEstoqueQuadra);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
@@ -63,7 +173,7 @@ export default function Estoque() {
   };
 
   const handleConfirmProducts = (confirmedProducts: ScannedProduct[]) => {
-    const newProducts: ProdutoEstoque[] = confirmedProducts.map((p, index) => ({
+    const newProducts: EstoqueProduto[] = confirmedProducts.map((p, index) => ({
       id: `scanned-${Date.now()}-${index}`,
       nome: p.nome,
       preco: p.preco,
@@ -91,7 +201,7 @@ export default function Estoque() {
       return;
     }
 
-    const product: ProdutoEstoque = {
+    const product: EstoqueProduto = {
       id: `prod-${Date.now()}`,
       nome: newProduct.name.trim(),
       preco: parseFloat(newProduct.price.replace(",", ".")),
