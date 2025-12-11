@@ -254,17 +254,23 @@ export function useFirestoreLanchonetePedidos() {
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
   
-  const pedidosHoje = pedidos.filter(p => {
+  const pedidosHojeLista = pedidos.filter(p => {
     const dataPedido = new Date(p.created_at);
     return dataPedido >= hoje;
   });
   
+  const vendasHoje = pedidosHojeLista
+    .filter(p => p.status !== "cancelado")
+    .reduce((acc, p) => acc + p.total, 0);
+  
   const estatisticas = {
-    totalPedidos: pedidosHoje.length,
-    totalVendas: pedidosHoje
-      .filter(p => p.status !== "cancelado")
-      .reduce((acc, p) => acc + p.total, 0),
-    pedidosPendentes: pedidosHoje.filter(p => p.status === "pendente").length,
+    totalPedidos: pedidosHojeLista.length,
+    totalVendas: vendasHoje,
+    pedidosPendentes: pedidosHojeLista.filter(p => p.status === "pendente").length,
+    vendasHoje,
+    pedidosHoje: pedidosHojeLista.length,
+    ticketMedio: pedidosHojeLista.length > 0 ? vendasHoje / pedidosHojeLista.length : 0,
+    clientesAtendidos: new Set(pedidosHojeLista.map(p => p.cliente_nome)).size,
   };
 
   return {

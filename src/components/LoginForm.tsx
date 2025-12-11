@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Key } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { z } from "zod";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -91,7 +92,7 @@ const LoginForm = () => {
     }
   };
 
-  // Login para Admin/Lanchonete (usa Supabase Auth)
+  // Login para Admin/Lanchonete (usa Firebase Auth)
   const handleAdminSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateAdmin()) return;
@@ -103,7 +104,7 @@ const LoginForm = () => {
       setIsLoading(false);
       toast({
         title: "Erro ao entrar",
-        description: error.message === "Invalid login credentials" 
+        description: error.message === "Firebase: Error (auth/invalid-credential)." 
           ? "Email ou senha incorretos" 
           : error.message,
         variant: "destructive",
@@ -113,31 +114,13 @@ const LoginForm = () => {
         title: "Bem-vindo!",
         description: "Login realizado com sucesso.",
       });
-      
-      // Buscar role diretamente do banco para garantir redirecionamento correto
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (sessionData?.session?.user) {
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', sessionData.session.user.id)
-          .maybeSingle();
-        
-        setIsLoading(false);
-        
-        if (roleData?.role) {
-          redirectByRole(roleData.role);
-        } else {
-          navigate('/aluno');
-        }
-      } else {
-        setIsLoading(false);
-        navigate('/aluno');
-      }
+      setIsLoading(false);
+      // Redirecionamento será feito pelo useFirebaseAuth com base na role
+      navigate('/admin');
     }
   };
 
-  // Login para Aluno (usa PIN da tabela alunos)
+  // Login para Aluno (usa PIN da coleção alunos no Firestore)
   const handleAlunoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateAluno()) return;
@@ -145,18 +128,14 @@ const LoginForm = () => {
     setIsLoading(true);
 
     try {
-      // Buscar aluno pelo email e verificar PIN
-      const { data: aluno, error } = await supabase
-        .from("alunos")
-        .select("id, nome, email, pin, situacao")
-        .eq("email", alunoEmail.trim().toLowerCase())
-        .maybeSingle();
+      // Buscar aluno pelo email no Firestore
+      const alunosQuery = query(
+        collection(db, "alunos"),
+        where("email", "==", alunoEmail.trim().toLowerCase())
+      );
+      const snapshot = await getDocs(alunosQuery);
 
-      if (error) {
-        throw new Error("Erro ao verificar credenciais");
-      }
-
-      if (!aluno) {
+      if (snapshot.empty) {
         toast({
           title: "Erro ao entrar",
           description: "Email não encontrado. Verifique ou faça seu cadastro.",
@@ -165,6 +144,9 @@ const LoginForm = () => {
         setIsLoading(false);
         return;
       }
+
+      const alunoDoc = snapshot.docs[0];
+      const aluno = { id: alunoDoc.id, ...alunoDoc.data() } as any;
 
       if (aluno.pin !== alunoPin) {
         toast({
@@ -285,7 +267,7 @@ const LoginForm = () => {
         </form>
       </TabsContent>
 
-      {/* Login Admin/Staff - com senha Supabase */}
+      {/* Login Admin/Staff - com senha Firebase */}
       <TabsContent value="admin">
         <form onSubmit={handleAdminSubmit} className="space-y-6">
           <div className="space-y-2">

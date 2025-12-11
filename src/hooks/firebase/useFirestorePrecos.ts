@@ -209,3 +209,94 @@ export function useFirestoreConfiguracoes() {
     setConfiguracao,
   };
 }
+
+// ==================== COMBINED PRECOS HOOK (para compatibilidade) ====================
+
+export interface ModalidadePreco {
+  id: string;
+  modalidade: string;
+  plano: string;
+  valor: number;
+  descricao: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AulaAvulsaPreco {
+  id: string;
+  modalidade: string;
+  valor: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface Configuracao {
+  id: string;
+  chave: string;
+  valor: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export function useFirestorePrecos() {
+  const modalidadesHook = useFirestoreModalidadePrecos();
+  const aulasAvulsasHook = useFirestoreAulasAvulsasPrecos();
+  const configHook = useFirestoreConfiguracoes();
+
+  const modalidadePrecos = modalidadesHook.precos as ModalidadePreco[];
+  const aulasAvulsas = aulasAvulsasHook.precos as AulaAvulsaPreco[];
+
+  // Agrupa preços por modalidade
+  const precosModalidades = modalidadePrecos.reduce((acc, preco) => {
+    if (!acc[preco.modalidade]) {
+      acc[preco.modalidade] = [];
+    }
+    acc[preco.modalidade].push({ nome: preco.plano, valor: preco.valor, descricao: preco.descricao });
+    return acc;
+  }, {} as Record<string, { nome: string; valor: number; descricao: string | null }[]>);
+
+  function getPrecoPlano(modalidade: string, plano: string): number | null {
+    const preco = modalidadePrecos.find(p => p.modalidade === modalidade && p.plano === plano);
+    return preco ? preco.valor : null;
+  }
+
+  function getPrecoAulaAvulsa(modalidade: string): number | null {
+    const normalizado = modalidade.toLowerCase();
+    const avulsa = aulasAvulsas.find(a => 
+      normalizado.includes(a.modalidade.toLowerCase()) || 
+      a.modalidade.toLowerCase().includes(normalizado.split(" ")[0])
+    );
+    return avulsa ? avulsa.valor : null;
+  }
+
+  function getPlanosModalidade(modalidade: string) {
+    return precosModalidades[modalidade] || [];
+  }
+
+  function getModalidadesDisponiveis(): string[] {
+    return Object.keys(precosModalidades);
+  }
+
+  const matricula = configHook.getConfiguracao("matricula") as { valor: number; descricao: string } | undefined;
+
+  return {
+    modalidadePrecos,
+    aulasAvulsas,
+    precosModalidades,
+    matricula: matricula || { valor: 50, descricao: "Inclui camisa de treino" },
+    isLoading: modalidadesHook.isLoading || aulasAvulsasHook.isLoading || configHook.isLoading,
+    getPrecoPlano,
+    getPrecoAulaAvulsa,
+    getPlanosModalidade,
+    getModalidadesDisponiveis,
+  };
+}
+
+// Função utilitária para formatar preço
+export function formatarPreco(valor: number): string {
+  return valor.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
