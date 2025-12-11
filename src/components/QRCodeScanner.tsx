@@ -5,7 +5,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { X, Camera, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { supabase } from "@/integrations/supabase/client";
+// Note: Edge function for NFCe parsing would need to be reimplemented for Firebase
+// For now, this is a placeholder that can be connected to Firebase Cloud Functions
 
 interface ScannedProduct {
   nome: string;
@@ -96,28 +97,13 @@ export function QRCodeScanner({ open, onClose, onProductsScanned }: QRCodeScanne
     });
 
     try {
-      // Use edge function to fetch and parse the NFC-e page (bypasses CORS)
-      const { data, error } = await supabase.functions.invoke('parse-nfce', {
-        body: { url },
+      // TODO: Implement Firebase Cloud Function for NFC-e parsing
+      // For now, show a message that this feature needs Firebase Cloud Functions
+      toast({
+        title: "Funcionalidade em desenvolvimento",
+        description: "A leitura de NFC-e via Firebase Cloud Functions está sendo implementada.",
+        variant: "destructive",
       });
-
-      if (error) {
-        throw new Error(error.message || 'Erro ao processar nota');
-      }
-
-      if (data?.success && data?.products?.length > 0) {
-        toast({
-          title: "Produtos encontrados!",
-          description: `${data.products.length} produtos identificados na nota fiscal.`,
-        });
-        onProductsScanned(data.products);
-      } else {
-        toast({
-          title: "Nenhum produto encontrado",
-          description: data?.error || "Não foi possível extrair produtos da nota fiscal.",
-          variant: "destructive",
-        });
-      }
     } catch (error) {
       console.error('Erro ao processar nota fiscal:', error);
       toast({

@@ -34,7 +34,8 @@ import { Plus, Search, UserPlus, Phone, User, CreditCard, MapPin, Heart, Calenda
 import { toast } from "sonner";
 import { TIPOS_SANGUINEOS } from "@/types/aluno";
 import { formatarPreco } from "@/hooks/usePrecos";
-import { supabase } from "@/integrations/supabase/client";
+import { collection, query, orderBy, getDocs, addDoc, updateDoc, doc, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 // Preços estáticos (serão carregados do banco posteriormente)
 const PRECOS_MODALIDADES: Record<string, { nome: string; valor: number }[]> = {
@@ -109,26 +110,20 @@ export default function Mensalidades() {
   const fetchAlunos = async () => {
     try {
       setLoading(true);
-      const { data: alunosData, error: alunosError } = await supabase
-        .from("alunos")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const alunosQuery = query(collection(db, "alunos"), orderBy("created_at", "desc"));
+      const alunosSnapshot = await getDocs(alunosQuery);
 
-      if (alunosError) throw alunosError;
+      const modalidadesSnapshot = await getDocs(collection(db, "aluno_modalidades"));
+      const modalidadesData = modalidadesSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      const { data: modalidadesData, error: modalidadesError } = await supabase
-        .from("aluno_modalidades")
-        .select("*");
-
-      if (modalidadesError) throw modalidadesError;
-
-      const alunosFormatados: Aluno[] = (alunosData || []).map((aluno) => {
-        const modalidadesAluno = (modalidadesData || [])
-          .filter((m) => m.aluno_id === aluno.id)
-          .map((m) => ({ nome: m.modalidade, plano: m.plano }));
+      const alunosFormatados: Aluno[] = alunosSnapshot.docs.map((docSnap) => {
+        const aluno = docSnap.data();
+        const modalidadesAluno = modalidadesData
+          .filter((m: any) => m.aluno_id === docSnap.id)
+          .map((m: any) => ({ nome: m.modalidade, plano: m.plano }));
 
         return {
-          id: aluno.id,
+          id: docSnap.id,
           nome: aluno.nome,
           email: aluno.email,
           cpf: aluno.cpf || "",
@@ -201,45 +196,36 @@ export default function Mensalidades() {
     }
 
     try {
-      const { data: alunoData, error: alunoError } = await supabase
-        .from("alunos")
-        .insert({
-          nome: novoAluno.nome.trim(),
-          email: novoAluno.email.trim().toLowerCase(),
-          cpf: novoAluno.cpf.trim(),
-          celular: novoAluno.celular.trim(),
-          data_nascimento: novoAluno.dataNascimento,
-          endereco: novoAluno.endereco.trim() || null,
-          contato_emergencia: novoAluno.contatoEmergencia.trim(),
-          tipo_sanguineo: novoAluno.tipoSanguineo,
-          doencas: novoAluno.doencas.trim() || null,
-          alergias: novoAluno.alergias.trim() || null,
-          autoriza_imagem: novoAluno.autorizaImagem,
-          observacoes: novoAluno.observacoes.trim() || null,
-          situacao: "pendente",
-        })
-        .select("id")
-        .single();
+      // Criar aluno no Firestore
+      const alunoRef = await addDoc(collection(db, "alunos"), {
+        nome: novoAluno.nome.trim(),
+        email: novoAluno.email.trim().toLowerCase(),
+        cpf: novoAluno.cpf.trim(),
+        celular: novoAluno.celular.trim(),
+        data_nascimento: novoAluno.dataNascimento,
+        endereco: novoAluno.endereco.trim() || null,
+        contato_emergencia: novoAluno.contatoEmergencia.trim(),
+        tipo_sanguineo: novoAluno.tipoSanguineo,
+        doencas: novoAluno.doencas.trim() || null,
+        alergias: novoAluno.alergias.trim() || null,
+        autoriza_imagem: novoAluno.autorizaImagem,
+        observacoes: novoAluno.observacoes.trim() || null,
+        situacao: "pendente",
+        created_at: serverTimestamp(),
+        updated_at: serverTimestamp(),
+      });
 
-      if (alunoError) throw alunoError;
-
-      const modalidadesInsert = Object.entries(novoAluno.modalidades).map(
-        ([modalidade, plano]) => {
-          const planoInfo = getPlanosModalidade(modalidade).find((p) => p.nome === plano);
-          return {
-            aluno_id: alunoData.id,
-            modalidade,
-            plano,
-            valor: planoInfo?.valor || 0,
-          };
-        }
-      );
-
-      const { error: modalidadesError } = await supabase
-        .from("aluno_modalidades")
-        .insert(modalidadesInsert);
-
-      if (modalidadesError) throw modalidadesError;
+      // Criar modalidades
+      for (const [modalidade, plano] of Object.entries(novoAluno.modalidades)) {
+        const planoInfo = getPlanosModalidade(modalidade).find((p) => p.nome === plano);
+        await addDoc(collection(db, "aluno_modalidades"), {
+          aluno_id: alunoRef.id,
+          modalidade,
+          plano,
+          valor: planoInfo?.valor || 0,
+          created_at: serverTimestamp(),
+        });
+      }
 
       setNovoAluno(emptyNovoAluno);
       setIsDialogOpen(false);
@@ -264,12 +250,8 @@ export default function Mensalidades() {
 
   const updateSituacao = async (id: string, situacao: Aluno["situacao"]) => {
     try {
-      const { error } = await supabase
-        .from("alunos")
-        .update({ situacao })
-        .eq("id", id);
-
-      if (error) throw error;
+      const docRef = doc(db, "alunos", id);
+      await updateDoc(docRef, { situacao, updated_at: serverTimestamp() });
 
       setAlunos(alunos.map((a) => (a.id === id ? { ...a, situacao } : a)));
       toast.success("Situação atualizada!");
