@@ -36,8 +36,7 @@ import {
   isTimeValidForDay,
   calculateEndTime,
 } from "@/services/bookingService";
-import { collection, query, where, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface NewBookingModalProps {
@@ -93,17 +92,14 @@ export function NewBookingModal({ onBookingAdded }: NewBookingModalProps) {
     setIsSubmitting(true);
 
     try {
-      // Verificar conflitos no Firestore
-      const aulasQuery = query(
-        collection(db, "aulas_recorrentes"),
-        where("horario_inicio", "==", recurringTime)
-      );
-      const aulasSnapshot = await getDocs(aulasQuery);
-      const aulasExistentes = aulasSnapshot.docs
-        .map(d => d.data())
-        .filter(a => selectedDays.includes(a.dia_semana));
+      // Verificar conflitos no banco de dados para cada dia selecionado
+      const { data: aulasExistentes } = await supabase
+        .from("aulas_recorrentes")
+        .select("dia_semana, modalidade, horario_inicio")
+        .in("dia_semana", selectedDays)
+        .eq("horario_inicio", recurringTime);
 
-      if (aulasExistentes.length > 0) {
+      if (aulasExistentes && aulasExistentes.length > 0) {
         const diasConflito = aulasExistentes.map(a => 
           DAYS_OF_WEEK.find(d => d.value === a.dia_semana)?.label || `Dia ${a.dia_semana}`
         ).join(", ");
@@ -120,16 +116,21 @@ export function NewBookingModal({ onBookingAdded }: NewBookingModalProps) {
       const horarioFim = calculateEndTime(recurringTime, 1);
 
       // Inserir uma aula para cada dia da semana selecionado
-      for (const dia of selectedDays) {
-        await addDoc(collection(db, "aulas_recorrentes"), {
-          modalidade: classType,
-          professor: "A definir",
-          dia_semana: dia,
-          horario_inicio: recurringTime,
-          horario_fim: horarioFim,
-          max_alunos: 8,
-          created_at: serverTimestamp(),
-        });
+      const aulasParaInserir = selectedDays.map(dia => ({
+        modalidade: classType,
+        professor: "A definir",
+        dia_semana: dia,
+        horario_inicio: recurringTime,
+        horario_fim: horarioFim,
+        max_alunos: 8,
+      }));
+
+      const { error } = await supabase
+        .from("aulas_recorrentes")
+        .insert(aulasParaInserir);
+
+      if (error) {
+        throw new Error("Erro ao salvar aula: " + error.message);
       }
 
       // Invalidar queries para atualizar a grade
@@ -180,81 +181,87 @@ export function NewBookingModal({ onBookingAdded }: NewBookingModalProps) {
     try {
       const dataFormatada = format(singleDate, "yyyy-MM-dd");
 
-      // Verificar conflito com aulas recorrentes
-      const aulasQuery = query(
-        collection(db, "aulas_recorrentes"),
-        where("dia_semana", "==", dayOfWeek),
-        where("horario_inicio", "==", singleTime)
-      );
-      const aulasSnapshot = await getDocs(aulasQuery);
+      // Verificar conflito com aulas recorrentes no banco
+      const { data: aulasConflito } = await supabase
+        .from("aulas_recorrentes")
+        .select("modalidade")
+        .eq("dia_semana", dayOfWeek)
+        .eq("horario_inicio", singleTime)
+        .limit(1);
 
-      if (!aulasSnapshot.empty) {
-        const aula = aulasSnapshot.docs[0].data();
+      if (aulasConflito && aulasConflito.length > 0) {
         toast({
           variant: "destructive",
           title: "Conflito de horário",
-          description: `Já existe aula de ${aula.modalidade} neste horário.`,
+          description: `Já existe aula de ${aulasConflito[0].modalidade} neste horário.`,
         });
         setIsSubmitting(false);
         return;
       }
 
-      // Verificar conflito com reservas existentes
-      const reservasQuery = query(
-        collection(db, "reservas"),
-        where("data", "==", dataFormatada),
-        where("horario_inicio", "==", singleTime)
-      );
-      const reservasSnapshot = await getDocs(reservasQuery);
-      const reservasConflito = reservasSnapshot.docs
-        .map(d => d.data())
-        .filter(r => r.status !== "cancelada");
+      // Verificar conflito com reservas existentes no banco
+      const { data: reservasConflito } = await supabase
+        .from("reservas")
+        .select("aluno_id, alunos(nome)")
+        .eq("data", dataFormatada)
+        .eq("horario_inicio", singleTime)
+        .neq("status", "cancelada")
+        .limit(1);
 
-      if (reservasConflito.length > 0) {
+      if (reservasConflito && reservasConflito.length > 0) {
+        const nomeCliente = (reservasConflito[0] as any).alunos?.nome || "outro cliente";
         toast({
           variant: "destructive",
           title: "Conflito de horário",
-          description: `Já existe reserva neste horário.`,
+          description: `Já existe reserva de ${nomeCliente} neste horário.`,
         });
         setIsSubmitting(false);
         return;
       }
 
       // Buscar ou criar aluno
-      const alunosQuery = query(
-        collection(db, "alunos"),
-        where("nome", "==", clientName)
-      );
-      const alunosSnapshot = await getDocs(alunosQuery);
-      
-      let alunoId: string;
+      const { data: alunoExistente } = await supabase
+        .from("alunos")
+        .select("id")
+        .ilike("nome", clientName)
+        .limit(1)
+        .maybeSingle();
 
-      if (alunosSnapshot.empty) {
-        // Criar novo aluno
-        const novoAlunoRef = await addDoc(collection(db, "alunos"), {
-          nome: clientName,
-          email: `${clientName.toLowerCase().replace(/\s+/g, '.')}@reserva.temp`,
-          situacao: "pendente",
-          created_at: serverTimestamp(),
-          updated_at: serverTimestamp(),
-        });
-        alunoId = novoAlunoRef.id;
-      } else {
-        alunoId = alunosSnapshot.docs[0].id;
+      let alunoId = alunoExistente?.id;
+
+      if (!alunoId) {
+        const { data: novoAluno, error: erroAluno } = await supabase
+          .from("alunos")
+          .insert({
+            nome: clientName,
+            email: `${clientName.toLowerCase().replace(/\s+/g, '.')}@reserva.temp`,
+            situacao: "pendente",
+          })
+          .select("id")
+          .single();
+
+        if (erroAluno) {
+          throw new Error("Erro ao criar registro do cliente");
+        }
+        alunoId = novoAluno.id;
       }
 
       // Criar a reserva
       const horarioFim = calculateEndTime(singleTime, 1);
 
-      await addDoc(collection(db, "reservas"), {
-        aluno_id: alunoId,
-        data: dataFormatada,
-        horario_inicio: singleTime,
-        horario_fim: horarioFim,
-        status: "confirmada",
-        created_at: serverTimestamp(),
-        updated_at: serverTimestamp(),
-      });
+      const { error: erroReserva } = await supabase
+        .from("reservas")
+        .insert({
+          aluno_id: alunoId,
+          data: dataFormatada,
+          horario_inicio: singleTime,
+          horario_fim: horarioFim,
+          status: "confirmada",
+        });
+
+      if (erroReserva) {
+        throw new Error("Erro ao criar reserva: " + erroReserva.message);
+      }
 
       // Invalidar queries
       await queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });

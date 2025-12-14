@@ -1,5 +1,5 @@
 // Serviço de reservas - lógica de negócio centralizada
-// Conectado ao Firestore
+// Conectado ao Supabase
 
 import { format, isSameDay, isBefore, isToday } from "date-fns";
 import { 
@@ -9,14 +9,7 @@ import {
   SingleBooking,
   SlotStatus
 } from "@/types/booking";
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  orderBy 
-} from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 
 // Constantes
 const COURT_ID = "court-1";
@@ -121,29 +114,30 @@ export function getPricingRules() {
   return defaultPricingRules;
 }
 
-// === AULAS RECORRENTES (do Firestore) ===
+// === AULAS RECORRENTES (do Supabase) ===
 export async function fetchRecurringClasses(): Promise<RecurringClass[]> {
-  const aulasQuery = query(
-    collection(db, "aulas_recorrentes"),
-    orderBy("horario_inicio")
-  );
-  const snapshot = await getDocs(aulasQuery);
+  const { data, error } = await supabase
+    .from("aulas_recorrentes")
+    .select("*")
+    .order("horario_inicio");
 
-  const classes: RecurringClass[] = snapshot.docs.map(doc => {
-    const aula = doc.data();
-    return {
-      id: doc.id,
-      court_id: COURT_ID,
-      class_type: aula.modalidade,
-      instructor_name: aula.professor,
-      days_of_week: [aula.dia_semana],
-      start_time: aula.horario_inicio?.slice(0, 5) || aula.horario_inicio,
-      end_time: aula.horario_fim?.slice(0, 5) || aula.horario_fim,
-      is_active: true,
-      created_at: aula.created_at?.toDate?.() || new Date(),
-      enrolled_students: [],
-    };
-  });
+  if (error) {
+    console.error("Erro ao buscar aulas recorrentes:", error);
+    return [];
+  }
+
+  const classes: RecurringClass[] = (data || []).map(aula => ({
+    id: aula.id,
+    court_id: COURT_ID,
+    class_type: aula.modalidade,
+    instructor_name: aula.professor,
+    days_of_week: [aula.dia_semana],
+    start_time: aula.horario_inicio.slice(0, 5),
+    end_time: aula.horario_fim.slice(0, 5),
+    is_active: true,
+    created_at: new Date(aula.created_at),
+    enrolled_students: [],
+  }));
 
   localRecurringClasses = classes;
   return classes;

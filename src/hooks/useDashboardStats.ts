@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { format, startOfMonth, endOfMonth } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { format, startOfDay, endOfDay, startOfMonth, endOfMonth } from "date-fns";
 
 export interface DashboardStats {
   reservasHoje: number;
@@ -30,6 +29,7 @@ export interface ReservaCompleta {
   };
 }
 
+// Buscar estatísticas do dashboard
 export function useDashboardStats() {
   return useQuery({
     queryKey: ["dashboard-stats"],
@@ -42,53 +42,63 @@ export function useDashboardStats() {
       const fimMesStr = format(fimMes, "yyyy-MM-dd");
 
       // Reservas hoje
-      const reservasHojeQuery = query(
-        collection(db, "reservas"),
-        where("data", "==", hojeStr),
-        where("status", "!=", "cancelada")
-      );
-      const reservasHojeSnap = await getDocs(reservasHojeQuery);
-      const reservasHoje = reservasHojeSnap.size;
+      const { count: reservasHoje, error: erroReservasHoje } = await supabase
+        .from("reservas")
+        .select("*", { count: "exact", head: true })
+        .eq("data", hojeStr)
+        .neq("status", "cancelada");
+
+      if (erroReservasHoje) {
+        console.error("Erro ao buscar reservas hoje:", erroReservasHoje);
+      }
 
       // Usuários ativos (alunos em_dia)
-      const alunosQuery = query(
-        collection(db, "alunos"),
-        where("situacao", "==", "em_dia")
-      );
-      const alunosSnap = await getDocs(alunosQuery);
-      const usuariosAtivos = alunosSnap.size;
+      const { count: usuariosAtivos, error: erroUsuarios } = await supabase
+        .from("alunos")
+        .select("*", { count: "exact", head: true })
+        .eq("situacao", "em_dia");
 
-      // Horas reservadas no mês
-      const reservasMesQuery = query(
-        collection(db, "reservas"),
-        where("data", ">=", inicioMesStr),
-        where("data", "<=", fimMesStr),
-        where("status", "!=", "cancelada")
-      );
-      const reservasMesSnap = await getDocs(reservasMesQuery);
+      if (erroUsuarios) {
+        console.error("Erro ao buscar usuários ativos:", erroUsuarios);
+      }
+
+      // Horas reservadas no mês (soma de todas as reservas)
+      const { data: reservasMes, error: erroReservasMes } = await supabase
+        .from("reservas")
+        .select("horario_inicio, horario_fim")
+        .gte("data", inicioMesStr)
+        .lte("data", fimMesStr)
+        .neq("status", "cancelada");
+
+      if (erroReservasMes) {
+        console.error("Erro ao buscar reservas do mês:", erroReservasMes);
+      }
 
       let horasReservadas = 0;
-      reservasMesSnap.forEach((doc) => {
-        const reserva = doc.data();
-        const inicio = parseInt(reserva.horario_inicio.split(":")[0]);
-        const fim = parseInt(reserva.horario_fim.split(":")[0]);
-        horasReservadas += (fim - inicio);
-      });
+      if (reservasMes) {
+        horasReservadas = reservasMes.reduce((acc, reserva) => {
+          const inicio = parseInt(reserva.horario_inicio.split(":")[0]);
+          const fim = parseInt(reserva.horario_fim.split(":")[0]);
+          return acc + (fim - inicio);
+        }, 0);
+      }
 
-      // Taxa de ocupação
+      // Taxa de ocupação (baseada nos slots disponíveis vs reservados hoje)
+      // Considerando horário de funcionamento: 7h às 22h = 15 slots por dia
       const slotsDisponiveis = 15;
-      const taxaOcupacao = reservasHoje
+      const taxaOcupacao = reservasHoje 
         ? Math.min(Math.round((reservasHoje / slotsDisponiveis) * 100), 100)
         : 0;
 
-      const tendenciaReservas = reservasHoje > 0 ? `+${reservasHoje}` : "0";
-      const tendenciaUsuarios = usuariosAtivos > 0 ? `+${Math.min(usuariosAtivos, 10)}` : "0";
+      // Calcular tendências (comparando com ontem/mês anterior - simplificado)
+      const tendenciaReservas = reservasHoje && reservasHoje > 0 ? `+${reservasHoje}` : "0";
+      const tendenciaUsuarios = usuariosAtivos && usuariosAtivos > 0 ? `+${Math.min(usuariosAtivos, 10)}` : "0";
       const tendenciaHoras = horasReservadas > 0 ? `+${horasReservadas}h` : "0h";
       const tendenciaOcupacao = taxaOcupacao > 0 ? `${taxaOcupacao}%` : "0%";
 
       return {
-        reservasHoje,
-        usuariosAtivos,
+        reservasHoje: reservasHoje || 0,
+        usuariosAtivos: usuariosAtivos || 0,
         horasReservadas,
         taxaOcupacao,
         tendenciaReservas,
@@ -97,147 +107,143 @@ export function useDashboardStats() {
         tendenciaOcupacao,
       };
     },
-    refetchInterval: 60000,
+    refetchInterval: 60000, // Atualizar a cada 1 minuto
   });
 }
 
+// Buscar reservas de um dia específico
 export function useReservasDoDia(data: Date) {
   const dataStr = format(data, "yyyy-MM-dd");
 
   return useQuery({
     queryKey: ["reservas-do-dia", dataStr],
     queryFn: async (): Promise<ReservaCompleta[]> => {
-      const reservasQuery = query(
-        collection(db, "reservas"),
-        where("data", "==", dataStr),
-        orderBy("horario_inicio")
-      );
-      const reservasSnap = await getDocs(reservasQuery);
+      const { data: reservas, error } = await supabase
+        .from("reservas")
+        .select(`
+          id,
+          aluno_id,
+          data,
+          horario_inicio,
+          horario_fim,
+          status,
+          created_at,
+          alunos (
+            id,
+            nome,
+            email,
+            celular
+          )
+        `)
+        .eq("data", dataStr)
+        .order("horario_inicio");
 
-      const reservas: ReservaCompleta[] = [];
-      
-      for (const doc of reservasSnap.docs) {
-        const r = doc.data();
-        
-        // Buscar dados do aluno
-        let aluno = undefined;
-        if (r.aluno_id) {
-          const alunoQuery = query(
-            collection(db, "alunos"),
-            where("__name__", "==", r.aluno_id)
-          );
-          const alunoSnap = await getDocs(alunoQuery);
-          if (!alunoSnap.empty) {
-            const alunoData = alunoSnap.docs[0].data();
-            aluno = {
-              id: alunoSnap.docs[0].id,
-              nome: alunoData.nome,
-              email: alunoData.email,
-              celular: alunoData.celular,
-            };
-          }
-        }
-
-        reservas.push({
-          id: doc.id,
-          aluno_id: r.aluno_id,
-          data: r.data,
-          horario_inicio: r.horario_inicio,
-          horario_fim: r.horario_fim,
-          status: r.status,
-          created_at: r.created_at?.toDate?.()?.toISOString() || r.created_at,
-          aluno,
-        });
+      if (error) {
+        console.error("Erro ao buscar reservas do dia:", error);
+        throw error;
       }
 
-      return reservas;
+      return (reservas || []).map((r: any) => ({
+        id: r.id,
+        aluno_id: r.aluno_id,
+        data: r.data,
+        horario_inicio: r.horario_inicio,
+        horario_fim: r.horario_fim,
+        status: r.status,
+        created_at: r.created_at,
+        aluno: r.alunos ? {
+          id: r.alunos.id,
+          nome: r.alunos.nome,
+          email: r.alunos.email,
+          celular: r.alunos.celular,
+        } : undefined,
+      }));
     },
   });
 }
 
-export function useTodasReservas(filtros?: {
-  dataInicio?: string;
-  dataFim?: string;
+// Buscar todas as reservas (para o admin)
+export function useTodasReservas(filtros?: { 
+  dataInicio?: string; 
+  dataFim?: string; 
   status?: "pendente" | "confirmada" | "cancelada" | "concluida";
 }) {
   return useQuery({
     queryKey: ["todas-reservas", filtros],
     queryFn: async (): Promise<ReservaCompleta[]> => {
-      let reservasQuery = query(collection(db, "reservas"), orderBy("data", "desc"));
-      const reservasSnap = await getDocs(reservasQuery);
+      let query = supabase
+        .from("reservas")
+        .select(`
+          id,
+          aluno_id,
+          data,
+          horario_inicio,
+          horario_fim,
+          status,
+          created_at,
+          alunos (
+            id,
+            nome,
+            email,
+            celular
+          )
+        `)
+        .order("data", { ascending: false })
+        .order("horario_inicio");
 
-      const reservas: ReservaCompleta[] = [];
-
-      for (const doc of reservasSnap.docs) {
-        const r = doc.data();
-        
-        // Aplicar filtros manualmente
-        if (filtros?.dataInicio && r.data < filtros.dataInicio) continue;
-        if (filtros?.dataFim && r.data > filtros.dataFim) continue;
-        if (filtros?.status && r.status !== filtros.status) continue;
-
-        // Buscar dados do aluno
-        let aluno = undefined;
-        if (r.aluno_id) {
-          const alunoQuery = query(
-            collection(db, "alunos"),
-            where("__name__", "==", r.aluno_id)
-          );
-          const alunoSnap = await getDocs(alunoQuery);
-          if (!alunoSnap.empty) {
-            const alunoData = alunoSnap.docs[0].data();
-            aluno = {
-              id: alunoSnap.docs[0].id,
-              nome: alunoData.nome,
-              email: alunoData.email,
-              celular: alunoData.celular,
-            };
-          }
-        }
-
-        reservas.push({
-          id: doc.id,
-          aluno_id: r.aluno_id,
-          data: r.data,
-          horario_inicio: r.horario_inicio,
-          horario_fim: r.horario_fim,
-          status: r.status,
-          created_at: r.created_at?.toDate?.()?.toISOString() || r.created_at,
-          aluno,
-        });
+      if (filtros?.dataInicio) {
+        query = query.gte("data", filtros.dataInicio);
+      }
+      if (filtros?.dataFim) {
+        query = query.lte("data", filtros.dataFim);
+      }
+      if (filtros?.status) {
+        query = query.eq("status", filtros.status);
       }
 
-      return reservas;
+      const { data: reservas, error } = await query;
+
+      if (error) {
+        console.error("Erro ao buscar todas as reservas:", error);
+        throw error;
+      }
+
+      return (reservas || []).map((r: any) => ({
+        id: r.id,
+        aluno_id: r.aluno_id,
+        data: r.data,
+        horario_inicio: r.horario_inicio,
+        horario_fim: r.horario_fim,
+        status: r.status,
+        created_at: r.created_at,
+        aluno: r.alunos ? {
+          id: r.alunos.id,
+          nome: r.alunos.nome,
+          email: r.alunos.email,
+          celular: r.alunos.celular,
+        } : undefined,
+      }));
     },
   });
 }
 
-export interface AulaRecorrente {
-  id: string;
-  modalidade: string;
-  professor: string;
-  dia_semana: number;
-  horario_inicio: string;
-  horario_fim: string;
-  max_alunos?: number;
-  created_at?: string;
-}
-
+// Buscar aulas recorrentes
 export function useAulasRecorrentes() {
   return useQuery({
     queryKey: ["aulas-recorrentes"],
-    queryFn: async (): Promise<AulaRecorrente[]> => {
-      const aulasQuery = query(
-        collection(db, "aulas_recorrentes"),
-        orderBy("dia_semana"),
-        orderBy("horario_inicio")
-      );
-      const aulasSnap = await getDocs(aulasQuery);
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("aulas_recorrentes")
+        .select("*")
+        .order("dia_semana")
+        .order("horario_inicio");
 
-      return aulasSnap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as AulaRecorrente[];
+      if (error) {
+        console.error("Erro ao buscar aulas recorrentes:", error);
+        throw error;
+      }
+
+      return data || [];
     },
   });
 }

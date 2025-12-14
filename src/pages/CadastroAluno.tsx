@@ -24,8 +24,7 @@ import { ArrowLeft, UserPlus, Phone, Heart, Calendar, FileText, Loader2, Key, Re
 import FloatingShapes from "@/components/FloatingShapes";
 import { formatarPreco } from "@/hooks/usePrecos";
 import { TIPOS_SANGUINEOS, MODALIDADES_DISPONIVEIS } from "@/types/aluno";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 
 const generatePin = (): string => {
   return Math.floor(1000 + Math.random() * 9000).toString();
@@ -140,36 +139,53 @@ const CadastroAluno = () => {
     setIsSubmitting(true);
 
     try {
-      // Criar aluno no Firestore
-      const alunoRef = await addDoc(collection(db, "alunos"), {
-        nome: formData.nome.trim(),
-        email: formData.email.trim().toLowerCase(),
-        cpf: formData.cpf.trim() || null,
-        celular: formData.celular.trim() || null,
-        data_nascimento: formData.dataNascimento || null,
-        endereco: formData.endereco.trim() || null,
-        contato_emergencia: formData.contatoEmergencia.trim() || null,
-        tipo_sanguineo: formData.tipoSanguineo || null,
-        doencas: formData.doencas.trim() || null,
-        alergias: formData.alergias.trim() || null,
-        autoriza_imagem: formData.autorizacaoImagem,
-        observacoes: formData.observacoes.trim() || null,
-        situacao: "pendente",
-        pin: formData.pin,
-        created_at: serverTimestamp(),
-        updated_at: serverTimestamp(),
-      });
+      const { data: alunoData, error: alunoError } = await supabase
+        .from("alunos")
+        .insert({
+          nome: formData.nome.trim(),
+          email: formData.email.trim().toLowerCase(),
+          cpf: formData.cpf.trim() || null,
+          celular: formData.celular.trim() || null,
+          data_nascimento: formData.dataNascimento || null,
+          endereco: formData.endereco.trim() || null,
+          contato_emergencia: formData.contatoEmergencia.trim() || null,
+          tipo_sanguineo: formData.tipoSanguineo || null,
+          doencas: formData.doencas.trim() || null,
+          alergias: formData.alergias.trim() || null,
+          autoriza_imagem: formData.autorizacaoImagem,
+          observacoes: formData.observacoes.trim() || null,
+          situacao: "pendente",
+          pin: formData.pin,
+        })
+        .select("id")
+        .single();
 
-      // Criar modalidades do aluno
-      for (const m of modalidadesSelecionadas) {
+      if (alunoError) {
+        console.error("Erro ao cadastrar aluno:", alunoError);
+        if (alunoError.code === "23505") {
+          toast.error("Este email já está cadastrado");
+        } else {
+          toast.error("Erro ao enviar cadastro. Tente novamente.");
+        }
+        return;
+      }
+
+      const modalidadesInsert = modalidadesSelecionadas.map(m => {
         const planoInfo = getPlanosModalidade(m.modalidade).find(p => p.nome === m.plano);
-        await addDoc(collection(db, "aluno_modalidades"), {
-          aluno_id: alunoRef.id,
+        return {
+          aluno_id: alunoData.id,
           modalidade: m.modalidade,
           plano: m.plano,
           valor: planoInfo?.valor || 0,
-          created_at: serverTimestamp(),
-        });
+        };
+      });
+
+      const { error: modalidadesError } = await supabase
+        .from("aluno_modalidades")
+        .insert(modalidadesInsert);
+
+      if (modalidadesError) {
+        console.error("Erro ao cadastrar modalidades:", modalidadesError);
       }
 
       toast.success("Cadastro enviado com sucesso!", {
@@ -177,13 +193,9 @@ const CadastroAluno = () => {
       });
 
       navigate("/");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Erro inesperado:", error);
-      if (error?.code === "already-exists") {
-        toast.error("Este email já está cadastrado");
-      } else {
-        toast.error("Erro ao enviar cadastro. Tente novamente.");
-      }
+      toast.error("Erro ao enviar cadastro. Tente novamente.");
     } finally {
       setIsSubmitting(false);
     }
