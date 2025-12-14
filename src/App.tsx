@@ -22,6 +22,7 @@ import { AlunoLayout } from "./components/aluno/AlunoLayout";
 import AlunoHomeContent from "./pages/aluno/AlunoHomeContent";
 import ReservarHorario from "./pages/aluno/ReservarHorario";
 import MinhasReservas from "./pages/aluno/MinhasReservas";
+import LanchoneteCardapio from "./pages/aluno/LanchoneteCardapio";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +53,11 @@ const App = () => (
             <Route path="/aluno/reservas" element={
               <ProtectedRoute allowedRoles={['aluno', 'admin']}>
                 <AlunoLayout><MinhasReservas /></AlunoLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/aluno/lanchonete" element={
+              <ProtectedRoute allowedRoles={['aluno', 'admin']}>
+                <AlunoLayout><LanchoneteCardapio /></AlunoLayout>
               </ProtectedRoute>
             } />
             

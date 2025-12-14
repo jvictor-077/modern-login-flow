@@ -1,4 +1,4 @@
-import { Calendar, Home, CalendarPlus, LogOut, User } from "lucide-react";
+import { Calendar, Home, CalendarPlus, LogOut, User, Coffee } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
   Sidebar,
@@ -30,6 +30,11 @@ const menuItems = [
     title: "Minhas Reservas",
     url: "/aluno/reservas",
     icon: Calendar,
+  },
+  {
+    title: "Lanchonete",
+    url: "/aluno/lanchonete",
+    icon: Coffee,
   },
   {
     title: "Meu Perfil",
