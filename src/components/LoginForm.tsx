@@ -145,16 +145,36 @@ const LoginForm = () => {
     setIsLoading(true);
 
     try {
-      // Buscar aluno pelo email e verificar PIN
-      const { data: aluno, error } = await supabase
-        .from("alunos")
-        .select("id, nome, email, pin, situacao")
-        .eq("email", alunoEmail.trim().toLowerCase())
-        .maybeSingle();
+      const normalizedEmail = alunoEmail.trim().toLowerCase();
+
+      const { data, error } = await supabase.functions.invoke("verify-aluno-pin", {
+        body: {
+          email: normalizedEmail,
+          pin: alunoPin,
+        },
+      });
 
       if (error) {
-        throw new Error("Erro ao verificar credenciais");
+        const msg = (error as any)?.message ?? "";
+        const code = msg.includes("NOT_FOUND") ? "NOT_FOUND" : msg.includes("INVALID_PIN") ? "INVALID_PIN" : "UNKNOWN";
+
+        toast({
+          title: "Erro ao entrar",
+          description:
+            code === "NOT_FOUND"
+              ? "Email não encontrado. Verifique ou faça seu cadastro."
+              : code === "INVALID_PIN"
+                ? "PIN incorreto."
+                : "Ocorreu um erro. Tente novamente.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
       }
+
+      const aluno = (data as any)?.aluno as
+        | { id: string; nome: string; email: string; situacao: "em_dia" | "pendente" | "atrasado" }
+        | undefined;
 
       if (!aluno) {
         toast({
@@ -166,15 +186,6 @@ const LoginForm = () => {
         return;
       }
 
-      if (aluno.pin !== alunoPin) {
-        toast({
-          title: "Erro ao entrar",
-          description: "PIN incorreto.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
 
       if (aluno.situacao === "pendente") {
         toast({
