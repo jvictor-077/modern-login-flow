@@ -212,7 +212,7 @@ const LoginForm = () => {
       });
 
       // Navigate after saving session
-      navigate('/aluno');
+      navigate('/alunos');
     } catch (error) {
       console.error("Erro no login:", error);
       toast({
