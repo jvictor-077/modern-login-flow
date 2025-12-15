@@ -204,12 +204,14 @@ const LoginForm = () => {
         email: aluno.email,
       }));
 
+      setIsLoading(false);
+      
       toast({
         title: `Bem-vindo, ${aluno.nome.split(' ')[0]}!`,
         description: "Login realizado com sucesso.",
       });
 
-      setIsLoading(false);
+      // Navigate after saving session
       navigate('/aluno');
     } catch (error) {
       console.error("Erro no login:", error);
