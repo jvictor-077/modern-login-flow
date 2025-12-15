@@ -39,26 +39,18 @@ const App = () => (
             
             <Route path="/cadastro" element={<CadastroAluno />} />
             
-            {/* Aluno routes - protected */}
+            {/* Aluno routes - AlunoLayout handles its own session check */}
             <Route path="/aluno" element={
-              <ProtectedRoute allowedRoles={['aluno', 'admin']}>
-                <AlunoLayout><AlunoHomeContent /></AlunoLayout>
-              </ProtectedRoute>
+              <AlunoLayout><AlunoHomeContent /></AlunoLayout>
             } />
             <Route path="/aluno/reservar" element={
-              <ProtectedRoute allowedRoles={['aluno', 'admin']}>
-                <AlunoLayout><ReservarHorario /></AlunoLayout>
-              </ProtectedRoute>
+              <AlunoLayout><ReservarHorario /></AlunoLayout>
             } />
             <Route path="/aluno/reservas" element={
-              <ProtectedRoute allowedRoles={['aluno', 'admin']}>
-                <AlunoLayout><MinhasReservas /></AlunoLayout>
-              </ProtectedRoute>
+              <AlunoLayout><MinhasReservas /></AlunoLayout>
             } />
             <Route path="/aluno/lanchonete" element={
-              <ProtectedRoute allowedRoles={['aluno', 'admin']}>
-                <AlunoLayout><LanchoneteCardapio /></AlunoLayout>
-              </ProtectedRoute>
+              <AlunoLayout><LanchoneteCardapio /></AlunoLayout>
             } />
             
             {/* Admin routes - protected */}
